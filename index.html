@@ -1,0 +1,608 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Kirirom Rooming List</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: sticky top bar, summary strip, sticky filter row, then one of three views (staff list, rooms, vans). Login is a full-screen gate. */
+:root{
+  --bg:#edf1ec; --surface:#fbfcfa; --ink:#15251d; --muted:#5a6b61; --line:#d3dcd3;
+  --pine:#1d5a43; --pine-ink:#ffffff; --amber:#b85f0f; --soft:#e2eae2;
+  --v1:#2a7a58; --v2:#b85f0f; --v3:#3b6ea5; --v4:#8a4f7d;
+  --kbc:#2c5f8a; --klc:#7a3f6b; --danger:#b3261e; --rh:#352c82; --rh2:#6c63e8; --rh-ink:#ffffff;
+  --display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1713; --surface:#16211b; --ink:#e5eee8; --muted:#92a69a; --line:#27382e;
+  --pine:#5cbf93; --pine-ink:#0d1a13; --amber:#f0a255; --soft:#1d2b23;
+  --v1:#5cbf93; --v2:#f0a255; --v3:#7fb0e6; --v4:#d39ac6;
+  --kbc:#7fb0e6; --klc:#d39ac6; --danger:#ff8a80; --rh:#2d2672; --rh2:#6c63e8; --rh-ink:#ffffff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1713; --surface:#16211b; --ink:#e5eee8; --muted:#92a69a; --line:#27382e;
+  --pine:#5cbf93; --pine-ink:#0d1a13; --amber:#f0a255; --soft:#1d2b23;
+  --v1:#5cbf93; --v2:#f0a255; --v3:#7fb0e6; --v4:#d39ac6;
+  --kbc:#7fb0e6; --klc:#d39ac6; --danger:#ff8a80; --rh:#2d2672; --rh2:#6c63e8; --rh-ink:#ffffff; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.wrap{max-width:1080px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* login */
+.gate{min-height:100vh;display:grid;place-items:center;padding-block:32px}
+.gate-card{width:100%;max-width:400px;display:grid;gap:18px}
+.gate h1{font-size:34px;line-height:1.05;letter-spacing:-.01em}
+.gate .sub{color:var(--muted);margin:0}
+.field{display:grid;gap:6px}
+.field label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.inp{width:100%;padding:11px 12px;border:1.5px solid var(--line);background:var(--surface);border-radius:6px}
+.inp:focus{border-color:var(--pine);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--pine) 25%,transparent)}
+.btn{padding:11px 16px;border-radius:6px;border:1.5px solid var(--pine);background:var(--pine);color:var(--pine-ink);font-weight:600}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);font-weight:500}
+.btn.sm{padding:6px 10px;font-size:13px}
+.err{color:var(--danger);min-height:1.3em;margin:0}
+.hint{font-size:13px;color:var(--muted);margin:0}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.top-in{max-width:1080px;margin:0 auto;padding:10px max(16px,env(safe-area-inset-left,0px));display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:700;font-size:18px;flex:1 1 auto;min-width:0}
+.brand small{display:block;font-family:var(--body);font-weight:400;font-size:12px;color:var(--muted)}
+.who{display:flex;align-items:center;gap:8px;font-size:13px}
+.role{padding:2px 8px;border-radius:99px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);color:var(--muted)}
+.role.admin{background:var(--pine);color:var(--pine-ink);border-color:var(--pine)}
+
+/* summary */
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;padding-block:16px 6px}
+.sum div{padding:2px 0 2px 12px;border-left:3px solid var(--line)}
+.sum b{display:block;font-family:var(--display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.sum span{font-size:12px;color:var(--muted)}
+.sum .a{border-color:var(--amber)} .sum .p{border-color:var(--pine)}
+
+/* tabs + filters */
+.bar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 53px);z-index:4;background:var(--bg);padding-block:8px;display:grid;gap:8px;border-bottom:1px solid var(--line);margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)));padding-inline:max(16px,env(safe-area-inset-left,0px))}
+.bar>*{max-width:1080px;width:100%;margin-inline:auto}
+.tabs{display:flex;gap:4px}
+.tab{padding:7px 14px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-weight:500}
+.tab[aria-selected="true"]{background:var(--soft);color:var(--ink)}
+.filters{display:grid;grid-template-columns:minmax(0,2fr) repeat(5,minmax(0,1fr)) auto;gap:8px}
+.filters .inp{padding:8px 10px}
+@media(max-width:760px){.bar{position:static}.filters{grid-template-columns:1fr 1fr}.filters .q{grid-column:1/-1}}
+
+/* staff rows */
+.list{margin-top:10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);overflow:hidden}
+.row{display:grid;grid-template-columns:28px 64px minmax(0,1fr) 130px 70px 44px 92px 110px;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row.head{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--soft)}
+.row.noadm{grid-template-columns:64px minmax(0,1fr) 130px 70px 44px 92px 110px}
+.nm{min-width:0;overflow-wrap:anywhere}
+.nm em{font-style:normal;font-size:12px;color:var(--muted);margin-left:6px}
+.co{font-weight:600;font-size:12px}.co.KBC{color:var(--kbc)}.co.KLC{color:var(--klc)}
+.vchip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;color:var(--vc);background:color-mix(in srgb,var(--vc) 14%,transparent);white-space:nowrap}
+.v1{--vc:var(--v1)}.v2{--vc:var(--v2)}.v3{--vc:var(--v3)}.v4{--vc:var(--v4)}.v0{--vc:var(--muted)}
+.room{font-family:var(--mono);font-weight:500}
+.room.none{color:var(--muted);font-weight:400}
+.room-in{padding:6px 8px;border-radius:5px;border:1.5px solid var(--line);background:var(--bg);width:100%;font-family:var(--mono)}
+.room-in:focus{border-color:var(--amber);outline:none}
+.sel{padding:5px 6px;border-radius:5px;border:1.5px solid var(--line);background:var(--bg);max-width:100%}
+.empty{padding:28px 16px;text-align:center;color:var(--muted)}
+@media(max-width:760px){
+  .row,.row.noadm{grid-template-columns:1fr auto auto;grid-template-areas:"nm nm nm" "id co g" "pos pos pos" "van van room";row-gap:6px}
+  .row.adm{grid-template-columns:auto 1fr auto auto;grid-template-areas:"ck nm nm nm" "id id co g" "pos pos pos pos" "van van van room"}
+  .row.head{display:none}
+  .row .c-ck{grid-area:ck}.row .c-nm{grid-area:nm}.row .c-id{grid-area:id}.row .c-pos{grid-area:pos}.row .c-co{grid-area:co}.row .c-g{grid-area:g}.row .c-van{grid-area:van}.row .c-room{grid-area:room;min-width:110px}
+}
+.ptag{display:inline-block;padding:2px 8px;border-radius:5px;font-size:12px;background:var(--soft);color:var(--ink)}
+.pos-in{font-family:var(--body)}
+.nm em{background:var(--soft);padding:1px 6px;border-radius:4px}
+.nm .rchg{font-size:12px;margin-left:6px;color:var(--danger)}
+
+/* bulk */
+.bulk{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;margin-top:10px;border:1.5px solid var(--amber);border-radius:8px;background:var(--surface)}
+.bulk .inp{width:140px;padding:7px 10px;font-family:var(--mono)}
+
+/* rooms + vans */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:8px;align-content:start;min-width:0}
+.card h3{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:22px}
+.card h3 small{font-family:var(--body);font-size:12px;font-weight:400;color:var(--muted)}
+.card.van{border-top:4px solid var(--vc)}
+.card.un{border-style:dashed}
+.mem{display:flex;gap:8px;justify-content:space-between;align-items:baseline;padding-top:6px;border-top:1px solid var(--line);min-width:0}
+.mem span:first-child{min-width:0;overflow-wrap:anywhere}
+.mem small{color:var(--muted);font-size:12px;white-space:nowrap}
+.stats{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums}
+.vans{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.plate{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.plate .inp{padding:5px 8px;max-width:160px;font-family:var(--mono)}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:6px;z-index:20;max-width:90vw}
+.banner{margin-top:10px;padding:9px 12px;border-radius:6px;background:var(--soft);font-size:13px;color:var(--muted)}
+
+/* room cards */
+.rooms{grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.rcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0;box-shadow:0 2px 8px color-mix(in srgb,var(--ink) 8%,transparent)}
+.rhead{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--rh);color:var(--rh-ink)}
+.rhead.un{background:var(--muted)}
+.rico{flex:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:color-mix(in srgb,#fff 14%,transparent)}
+.rtitle{flex:1;min-width:0}
+.rtitle b{display:block;font-family:var(--display);font-size:16px;line-height:1.2;overflow-wrap:anywhere}
+.rtitle span{font-size:12px;opacity:.8}
+.rpill{flex:none;padding:4px 12px;border-radius:99px;background:var(--rh2);color:#fff;font-weight:600;font-size:12px;white-space:nowrap}
+.rbody{display:grid;gap:8px;padding:14px 16px 16px}
+.rmem{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.rmem>div{min-width:0}
+.rmem b{display:block;font-weight:600;overflow-wrap:anywhere}
+.rmem small{color:var(--muted);font-size:12px}
+.rchg{flex:none;border:0;background:none;padding:2px;color:var(--rh2);text-decoration:underline;font-weight:600;font-size:13px}
+.rchg-in{width:84px;flex:none;padding:5px 7px;border-radius:6px;border:1.5px solid var(--rh2);background:var(--surface);font-family:var(--mono)}
+[hidden]{display:none!important}
+.btn{white-space:nowrap}
+/* modal */
+.ov{position:fixed;inset:0;z-index:30;display:grid;place-items:start center;padding:max(16px,env(safe-area-inset-top,0px)) 16px 16px;overflow:auto;background:color-mix(in srgb,#000 55%,transparent)}
+.modal{width:100%;max-width:520px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:grid;gap:14px;margin-top:6vh}
+.modal.wide{max-width:640px}
+.modal h2{font-size:20px}
+.mh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.mf{display:grid;gap:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:480px){.g2,.g3{grid-template-columns:1fr}}
+.prev{max-height:40vh;overflow:auto;display:grid;gap:6px}
+.btn:disabled{opacity:.5;cursor:default}
+.pubst{font-size:12px;color:var(--muted);max-width:220px}
+</style>
+
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+<div id="modal" class="ov" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>window.FIREBASE_CONFIG={"apiKey": "AIzaSyDqPkv5R02oHZSdHlDTRWT_W5UsbFVHVOM", "authDomain": "kirirom-rooming.firebaseapp.com", "projectId": "kirirom-rooming", "storageBucket": "kirirom-rooming.firebasestorage.app", "messagingSenderId": "1098326338072", "appId": "1:1098326338072:web:7eaec5e376057f4374b16d"};</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const PEOPLE=[{"no": 1, "company": "KLC", "sid": "3001", "name": "Teerachat Seingdee", "gender": "M", "remark": "MD", "role": "User", "van": 4, "label": "MD"}, {"no": 2, "company": "KBC", "sid": "2083", "name": "Vijarn Chotivithayatanin", "gender": "M", "remark": "MD", "role": "User", "van": 3, "label": "MD"}, {"no": 3, "company": "KBC", "sid": "2008", "name": "Pich Ambopong", "gender": "M", "remark": "GM", "role": "User", "van": 1, "label": "GM"}, {"no": 4, "company": "KLC", "sid": "3092", "name": "Chayaphon Jittrakornsakun", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 5, "company": "KLC", "sid": "3093", "name": "Pakornkritn Srirath", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 6, "company": "KLC", "sid": "3125", "name": "Khanapot Klinsong", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 7, "company": "KLC", "sid": "3127", "name": "Natakorn Phaitong", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 8, "company": "KBC", "sid": "2013", "name": "Nhoem Sypha", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 9, "company": "KBC", "sid": "2015", "name": "Ouch Chomno", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 10, "company": "KBC", "sid": "2087", "name": "Peerapong Jeansart", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 11, "company": "KBC", "sid": "2030", "name": "Hong Thearith", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 12, "company": "KBC", "sid": "2006", "name": "Chay Nhean Radan", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 13, "company": "KBC", "sid": "2007", "name": "Uon Somoun", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 14, "company": "KLC", "sid": "3012", "name": "Chansvang Vuththi", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 15, "company": "KLC", "sid": "3005", "name": "Phally Samrach", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 16, "company": "KBC", "sid": "2034", "name": "Seng Sokny", "gender": "M", "remark": "", "role": "User", "van": 2, "label": "MC"}, {"no": 17, "company": "KBC", "sid": "2023", "name": "Seng Thul", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 18, "company": "KLC", "sid": "3018", "name": "Lay Vichet", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 19, "company": "KLC", "sid": "3126", "name": "Soeng Sochanbora", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 20, "company": "KBC", "sid": "2009", "name": "Sok Dul", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 21, "company": "KBC", "sid": "2010", "name": "Morn Bunthon", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 22, "company": "KBC", "sid": "2011", "name": "Proek Sopheak", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 23, "company": "KBC", "sid": "2012", "name": "Chhoem Seyha", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 24, "company": "KBC", "sid": "2014", "name": "Sey Sarik", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 25, "company": "KBC", "sid": "2017", "name": "Hang Sao Ornn", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 26, "company": "KBC", "sid": "2016", "name": "Sam Khounthor", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 27, "company": "KBC", "sid": "2070", "name": "Oeung Oudom", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 28, "company": "KBC", "sid": "2078", "name": "Tech Kimhong", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 29, "company": "KBC", "sid": "2018", "name": "Moeun Rathana", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 30, "company": "KBC", "sid": "2025", "name": "Yan Phea", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 31, "company": "KBC", "sid": "2026", "name": "Prom Hall", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 32, "company": "KBC", "sid": "2020", "name": "Lunh Sopul", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 33, "company": "KBC", "sid": "2021", "name": "Sam Piseth", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 34, "company": "KBC", "sid": "2032", "name": "Taing Chhun Leng", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 35, "company": "KBC", "sid": "2024", "name": "Phai Sophorn", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 36, "company": "KBC", "sid": "2028", "name": "Tep Makara", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 37, "company": "KBC", "sid": "2037", "name": "Soth Channthon", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 38, "company": "KBC", "sid": "2039", "name": "Teng Sokhoeun", "gender": "M", "remark": "", "role": "User", "van": 4, "label": "Activity"}, {"no": 39, "company": "KBC", "sid": "2040", "name": "Kang Vannak", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 40, "company": "KBC", "sid": "2035", "name": "Song DalaPinin", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 41, "company": "KBC", "sid": "2036", "name": "Tan Sokkea", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 42, "company": "KBC", "sid": "2041", "name": "Roeurm Ratha", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 43, "company": "KBC", "sid": "2043", "name": "Sen Sokchea", "gender": "M", "remark": "", "role": "User", "van": 3, "label": "Activity"}, {"no": 44, "company": "KBC", "sid": "2044", "name": "Kloth Chanvesna", "gender": "M", "remark": "", "role": "User", "van": 4, "label": "MC"}, {"no": 45, "company": "KBC", "sid": "2045", "name": "Meang Socheat", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 46, "company": "KBC", "sid": "2047", "name": "Pheng Chhaiwat", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 47, "company": "KBC", "sid": "2048", "name": "Mey Thokna", "gender": "M", "remark": "", "role": "User", "van": 1, "label": "MC"}, {"no": 48, "company": "KBC", "sid": "2081", "name": "THOEURY THIB", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 49, "company": "KBC", "sid": "2050", "name": "Ma Longdy", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 50, "company": "KBC", "sid": "2051", "name": "Sam Sambath", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 51, "company": "KBC", "sid": "2052", "name": "Houn Cheysok", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 52, "company": "KBC", "sid": "2053", "name": "Roun Chantha", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 53, "company": "KBC", "sid": "2049", "name": "Ouch Kholeng", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 54, "company": "KBC", "sid": "2085", "name": "Ban Nisai", "gender": "M", "remark": "", "role": "User", "van": 1, "label": "Media"}, {"no": 55, "company": "KBC", "sid": "2056", "name": "Dy Bros", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 56, "company": "KBC", "sid": "2071", "name": "Kea Heven", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 57, "company": "KBC", "sid": "2073", "name": "Chhot Lyhuo", "gender": "M", "remark": "", "role": "Admin", "van": 1, "label": "Transportation"}, {"no": 58, "company": "KBC", "sid": "2064", "name": "Roeun Sarith", "gender": "M", "remark": "", "role": "Admin", "van": 2, "label": "Transportation"}, {"no": 59, "company": "KBC", "sid": "2084", "name": "Vat Makara", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 60, "company": "KBC", "sid": "2065", "name": "Tal Met", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 61, "company": "KBC", "sid": "2079", "name": "Nath Sotitvongsa", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 62, "company": "KLC", "sid": "N016", "name": "Hun Thea", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 63, "company": "KLC", "sid": "3007", "name": "Chhuoy Singhak", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 64, "company": "KLC", "sid": "3008", "name": "Hach Sangha", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 65, "company": "KLC", "sid": "3013", "name": "Heng Paktya", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 66, "company": "KLC", "sid": "3017", "name": "Hem Seyha", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 67, "company": "KLC", "sid": "3022", "name": "Sok Seyha", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 68, "company": "KLC", "sid": "3024", "name": "Chhot Thany", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 69, "company": "KLC", "sid": "3043", "name": "Po Chanrith", "gender": "M", "remark": "", "role": "User", "van": 2, "label": "Media"}, {"no": 70, "company": "KLC", "sid": "3075", "name": "Nim Vannak", "gender": "M", "remark": "", "role": "User", "van": 2, "label": "Food"}, {"no": 71, "company": "KLC", "sid": "3105", "name": "Sam Lay", "gender": "M", "remark": "", "role": "User", "van": 3, "label": "Activity"}, {"no": 72, "company": "KLC", "sid": "3040", "name": "Huon Rortha", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 73, "company": "KLC", "sid": "3045", "name": "Soeurng Thet", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 74, "company": "KLC", "sid": "3048", "name": "Set Vibol", "gender": "M", "remark": "", "role": "User", "van": 3, "label": "MC"}, {"no": 75, "company": "KLC", "sid": "3080", "name": "CHOU NARITH", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 76, "company": "KLC", "sid": "3079", "name": "Vann Lymeng", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 77, "company": "KLC", "sid": "3055", "name": "Sak Borey", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 78, "company": "KLC", "sid": "3061", "name": "Sim Sothearith", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 79, "company": "KLC", "sid": "3102", "name": "Ong Tongheang", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 80, "company": "KLC", "sid": "3101", "name": "Chum Ram", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 81, "company": "KLC", "sid": "3111", "name": "Sovann Panhavuth", "gender": "M", "remark": "", "role": "User", "van": 2, "label": "Activity"}, {"no": 82, "company": "KLC", "sid": "3112", "name": "Pov Veasna", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 83, "company": "KLC", "sid": "3091", "name": "Pich Pongdavit", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 84, "company": "KLC", "sid": "3096", "name": "Uy Oeun", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 85, "company": "KLC", "sid": "3083", "name": "Math Masy", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 86, "company": "KLC", "sid": "3110", "name": "Hai Sochea", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 87, "company": "KLC", "sid": "3099", "name": "SAK SokPanha", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 88, "company": "KLC", "sid": "3129", "name": "Rouen Porhouy", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 89, "company": "KLC", "sid": "3131", "name": "Ath Sokunsak", "gender": "M", "remark": "", "role": "User", "van": 4, "label": "Media"}, {"no": 90, "company": "KLC", "sid": "3123", "name": "Kin Rathana", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 91, "company": "KLC", "sid": "N004", "name": "Chea Vicheth", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 92, "company": "KLC", "sid": "N015", "name": "Van Sovong", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 93, "company": "KBC", "sid": "N001", "name": "Sen Thea", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 94, "company": "KBC", "sid": "N002", "name": "Sen Thon", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 95, "company": "KBC", "sid": "N005", "name": "Yorn Samoeun", "gender": "M", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 96, "company": "KBC", "sid": "N006", "name": "Oeurn Aun", "gender": "M", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 97, "company": "KBC", "sid": "", "name": "Dul Chanthy", "gender": "M", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 98, "company": "KLC", "sid": "N010", "name": "Khen Sokha", "gender": "M", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 99, "company": "KBC", "sid": "2088", "name": "Sunisa Chucherd", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 100, "company": "KBC", "sid": "2031", "name": "Khon Rady", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 101, "company": "KLC", "sid": "3049", "name": "Chum A Rann Ya", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 102, "company": "KLC", "sid": "3021", "name": "Hee Chanthanith", "gender": "F", "remark": "", "role": "User", "van": 4, "label": "Food"}, {"no": 103, "company": "KBC", "sid": "2029", "name": "Thor Seysantey", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 104, "company": "KBC", "sid": "2038", "name": "Deth Pao", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 105, "company": "KLC", "sid": "3014", "name": "Chhoun Sovanrathna", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 106, "company": "KBC", "sid": "2066", "name": "Duong Ner", "gender": "F", "remark": "", "role": "User", "van": 1, "label": "Activity/ Food"}, {"no": 107, "company": "KBC", "sid": "2067", "name": "Diro Chimy", "gender": "F", "remark": "", "role": "User", "van": 2, "label": "Activity"}, {"no": 108, "company": "KBC", "sid": "N003", "name": "Khem Sorphea", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 109, "company": "KBC", "sid": "2054", "name": "Tep Marady", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 110, "company": "KBC", "sid": "2080", "name": "Hy Sokkim", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 111, "company": "KBC", "sid": "N007", "name": "Soen Sony", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 112, "company": "KBC", "sid": "2060", "name": "Vuon Soriya", "gender": "F", "remark": "", "role": "Admin", "van": 3, "label": "Transportation"}, {"no": 113, "company": "KBC", "sid": "2069", "name": "Heang Monita", "gender": "F", "remark": "", "role": "User", "van": 4, "label": "Activity"}, {"no": 114, "company": "KLC", "sid": "N013", "name": "Uk Sothea", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 115, "company": "KBC", "sid": "2057", "name": "Ou Molika", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 116, "company": "KBC", "sid": "2068", "name": "Soeun Sokha", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 117, "company": "", "sid": "", "name": "Han Piseth", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 118, "company": "KBC", "sid": "2058", "name": "Va Sovanda", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 119, "company": "KLC", "sid": "3019", "name": "Yeun Chanthary", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 120, "company": "KLC", "sid": "3042", "name": "You Sreynin", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 121, "company": "KLC", "sid": "3009", "name": "Ros Kanika", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 122, "company": "KLC", "sid": "3010", "name": "Heng Sreylin", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 123, "company": "KLC", "sid": "3020", "name": "Nhim Sophary", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 124, "company": "KLC", "sid": "3032", "name": "Sok Channa", "gender": "F", "remark": "", "role": "User", "van": 1, "label": "MC"}, {"no": 125, "company": "KLC", "sid": "3033", "name": "Chinh Saorey", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 126, "company": "KLC", "sid": "3038", "name": "Lov Seavteang", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 127, "company": "KLC", "sid": "3034", "name": "Chea Maryna", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 128, "company": "KLC", "sid": "3036", "name": "Sok Sokunkanha", "gender": "F", "remark": "", "role": "User", "van": 3, "label": "MC"}, {"no": 129, "company": "KLC", "sid": "3039", "name": "Kun Leakhena", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 130, "company": "KLC", "sid": "3041", "name": "Vong Somavortey", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 131, "company": "KLC", "sid": "3085", "name": "Un Chanthorn", "gender": "F", "remark": "", "role": "User", "van": 4, "label": "MC"}, {"no": 132, "company": "KLC", "sid": "3095", "name": "Seng Sotheara", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 133, "company": "KLC", "sid": "3046", "name": "Keo Pichchantrea", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 134, "company": "KLC", "sid": "3050", "name": "Dul Chanry", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 135, "company": "KLC", "sid": "3053", "name": "Toeng Soheng", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 136, "company": "KLC", "sid": "3081", "name": "Oem Saray", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 137, "company": "KLC", "sid": "3057", "name": "​NY CHANTHOU", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 138, "company": "KLC", "sid": "3073", "name": "Nin Sreydavy", "gender": "F", "remark": "", "role": "User", "van": 3, "label": "Media"}, {"no": 139, "company": "KLC", "sid": "3054", "name": "Ouk Polin", "gender": "F", "remark": "", "role": "User", "van": 2, "label": "MC"}, {"no": 140, "company": "KLC", "sid": "3067", "name": "Yem Socheata", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 141, "company": "", "sid": "", "name": "Nop Rothana", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 142, "company": "KLC", "sid": "3071", "name": "SOBAN CHULKHET", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 143, "company": "KLC", "sid": "3063", "name": "Hang Manita", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 144, "company": "KLC", "sid": "3109", "name": "Choeun Ussa", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 145, "company": "KLC", "sid": "3072", "name": "TENG RATANA", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 146, "company": "KLC", "sid": "3113", "name": "Doen Sena", "gender": "F", "remark": "", "role": "User", "van": 1, "label": "Activity"}, {"no": 147, "company": "KLC", "sid": "3086", "name": "Lim Gechseang", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 148, "company": "KLC", "sid": "3074", "name": "Kong Rany", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 149, "company": "KLC", "sid": "3062", "name": "Ny Seakly", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 150, "company": "KLC", "sid": "3087", "name": "Try Navy", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 151, "company": "KLC", "sid": "3090", "name": "Tang Lyly", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 152, "company": "KLC", "sid": "3103", "name": "Oum Navy", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 153, "company": "KLC", "sid": "3104", "name": "Ear Mouylin", "gender": "F", "remark": "", "role": "User", "van": 4, "label": ""}, {"no": 154, "company": "KLC", "sid": "3098", "name": "DIN Sophearum", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 155, "company": "KLC", "sid": "3107", "name": "Heng Sreyly", "gender": "F", "remark": "", "role": "User", "van": 2, "label": ""}, {"no": 156, "company": "KLC", "sid": "3076", "name": "Bun Sokphim", "gender": "F", "remark": "", "role": "User", "van": 3, "label": ""}, {"no": 157, "company": "KLC", "sid": "3114", "name": "Yun Seyla", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}, {"no": 158, "company": "KLC", "sid": "3119", "name": "Keo Langhor", "gender": "F", "remark": "", "role": "User", "van": 3, "label": "Food"}, {"no": 159, "company": "KLC", "sid": "3128", "name": "Thoeun Laosor", "gender": "F", "remark": "", "role": "User", "van": 1, "label": ""}];
+const SNAP=/*SNAP*/{"assign":{},"vans":{},"staff":{}}/*END*/;
+const CAP=45;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=x=>String(x||'').replace(/[\s ]+/g,'').toUpperCase();
+const nn=x=>String(x||'').replace(/[\s ]+/g,' ').trim().toLowerCase();
+const nat=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+const DEFAULT_POS=['MD','GM','Food','Transportation','Media','Activity','Photos','First Aid','Committee'];
+
+let me=null, db=null, dl=null, art=null, dbOk=false, pubMsg='';
+let assign=SNAP.assign||{}, vanMeta=SNAP.vans||{}, extras=SNAP.staff||{};
+let f={q:'',van:'',room:'',co:'',g:'',pos:'',tab:'staff'};
+try{Object.assign(f,JSON.parse(localStorage.getItem('krr_f')||'{}'))}catch(e){}
+let sel=new Set(), editing=null, rmPending=null, panel=null, up=null;
+
+/* ---------- Firebase (used only when hosted outside Claude, e.g. GitHub Pages) ---------- */
+let FB=null, fbAuth=null, authed=false, pendingAdmin=null;
+const ADMIN_EMAIL='admin@kirirom-rooming.app';
+if(window.FIREBASE_CONFIG&&typeof firebase!=='undefined'){
+  try{
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    FB=firebase.firestore(); fbAuth=firebase.auth();
+    db={doc:p=>FB.doc(p),collection:c=>FB.collection(c)}; dbOk=true;
+    fbAuth.onAuthStateChanged(u=>{
+      authed=!!u&&u.email===ADMIN_EMAIL;
+      if(!me&&!pendingAdmin){try{const s=localStorage.getItem('krr_sid');if(s)doLogin(s,true)}catch(e){}}
+    });
+  }catch(e){FB=null;db=null;dbOk=false}
+}
+
+try{const s=localStorage.getItem('krr_sid'); if(s) doLogin(s,true)}catch(e){}
+
+/* ---------- data ---------- */
+function allBase(){
+  return [...PEOPLE,...Object.entries(extras).map(([id,d])=>({no:id,extra:true,sid:norm(d.sid),name:d.name||'',company:d.company||'',gender:d.gender||'M',remark:'',label:'',role:d.role||'User',van:0}))];
+}
+const baseOf=no=>allBase().find(p=>String(p.no)===String(no));
+const basePos=p=>p.label||p.remark||'';
+function eff(p){const a=assign[String(p.no)]||{};return{...p,van:a.van??p.van,room:(a.room||'').trim(),pos:(a.position??basePos(p)).trim()}}
+const all=()=>allBase().map(eff);
+const positions=()=>[...new Set([...DEFAULT_POS,...all().map(p=>p.pos).filter(Boolean)])].sort(nat);
+const newId=()=>'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+/* ---------- login ---------- */
+function doLogin(v,silent){
+  const k=norm(v);
+  if(!k)return fail('Enter your Staff ID.',silent);
+  if(k==='1'){me={guest:true,name:'Guest',admin:false,sid:'1'}}
+  else{
+    const p=allBase().find(p=>p.sid===k);
+    if(!p)return fail('Staff ID not found. If you have no Staff ID, enter 1.',silent);
+    const isAdm=p.role==='Admin';
+    if(isAdm&&FB&&!authed){if(silent)return false;pendingAdmin={k,p};return renderAdminStep()}
+    me={guest:false,name:p.name,admin:isAdm,sid:k};
+  }
+  try{localStorage.setItem('krr_sid',k)}catch(e){}
+  render();
+}
+function renderAdminStep(){
+  $('#app').innerHTML=`<div class="gate"><form class="gate-card" id="pf"><div><h1>Admin</h1><p class="sub">${esc(pendingAdmin.p.name)}, enter the admin password to make changes.</p></div>
+    <div class="field"><label for="pw">Admin password</label><input class="inp" id="pw" type="password" autocomplete="current-password" autofocus></div>
+    <p class="err" id="err" role="alert"></p><button class="btn" type="submit">Log in as admin</button>
+    <button class="btn ghost" type="button" id="vo">Continue as view only</button></form></div>`;
+  $('#pf').onsubmit=async e=>{e.preventDefault();
+    try{await fbAuth.signInWithEmailAndPassword(ADMIN_EMAIL,$('#pw').value);authed=true;const {k}=pendingAdmin;pendingAdmin=null;doLogin(k)}
+    catch(x){$('#err').textContent='Wrong admin password. Try again.'}};
+  $('#vo').onclick=()=>{const {k,p}=pendingAdmin;pendingAdmin=null;me={guest:false,name:p.name,admin:false,sid:k};try{localStorage.setItem('krr_sid',k)}catch(e){}render()};
+}
+function fail(m,silent){if(!silent){const e=$('#err');if(e)e.textContent=m} return false}
+function logout(){me=null;pendingAdmin=null;if(fbAuth&&authed){fbAuth.signOut();authed=false}sel.clear();panel=null;try{localStorage.removeItem('krr_sid')}catch(e){} render();renderModal()}
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,3200)}
+
+function match(p){
+  if(f.van!==''&&String(p.van)!==f.van)return false;
+  if(f.co&&p.company!==f.co)return false;
+  if(f.g&&p.gender!==f.g)return false;
+  if(f.room==='__none'&&p.room)return false;
+  if(f.room&&f.room!=='__none'&&p.room!==f.room)return false;
+  if(f.pos==='__none'&&p.pos)return false;
+  if(f.pos&&f.pos!=='__none'&&p.pos!==f.pos)return false;
+  if(f.q){const h=[p.name,p.sid,p.room,p.pos,p.company,p.van?'van '+p.van:''].join(' ').toLowerCase();
+    return f.q.toLowerCase().split(/\s+/).every(w=>h.includes(w))}
+  return true;
+}
+const vchip=n=>n?`<span class="vchip v${n}">VAN ${n}</span>`:`<span class="vchip v0">No van</span>`;
+const roomTxt=r=>r?`<span class="room">${esc(r)}</span>`:`<span class="room none">not set</span>`;
+
+/* ---------- main render ---------- */
+function render(){
+  const app=$('#app');
+  try{localStorage.setItem('krr_f',JSON.stringify(f))}catch(e){}
+  if(!me){
+    app.innerHTML=`<div class="gate"><form class="gate-card" id="lf">
+      <div><h1>Kirirom Mountain 2026</h1><p class="sub">Room list and van allocation</p></div>
+      <div class="field"><label for="sid">Staff ID</label>
+        <input class="inp" id="sid" autocomplete="off" inputmode="text" placeholder="e.g. 3001" autofocus></div>
+      <p class="err" id="err" role="alert"></p>
+      <button class="btn" type="submit">Log in</button>
+      <p class="hint">No Staff ID? Enter 1 to log in as a guest.</p></form></div>`;
+    $('#lf').onsubmit=e=>{e.preventDefault();doLogin($('#sid').value)};
+    return;
+  }
+  const A=all(), F=A.filter(match), adm=me.admin, P=positions();
+  const rooms=[...new Set(A.map(p=>p.room).filter(Boolean))].sort(nat);
+  const noRoom=A.filter(p=>!p.room).length;
+  app.innerHTML=`
+  <datalist id="poslist">${P.map(x=>`<option value="${esc(x)}">`).join('')}</datalist>
+  <div class="top"><div class="top-in"><div class="brand">Kirirom Mountain 2026<small>Room list and van allocation</small></div>
+    <div class="who"><span>${esc(me.name)}</span><span class="role ${adm?'admin':''}">${adm?'Admin':me.guest?'Guest · view only':'View only'}</span>
+    ${adm?`<span class="pubst" id="pub">${esc(pubMsg)}</span>`:''}
+    ${adm?`<button class="btn sm" data-act="addopen">Add staff</button><button class="btn ghost sm" data-act="upopen">Upload file</button><button class="btn ghost sm" data-act="export">Export CSV</button>`:''}
+    <button class="btn ghost sm" data-act="logout">Log out</button></div></div></div>
+  <div class="wrap">
+    <div class="sum"><div class="p"><b>${A.length}</b><span>Staff</span></div>
+      <div class="a"><b>${rooms.length}</b><span>Rooms in use</span></div>
+      <div class="a"><b>${noRoom}</b><span>Without a room</span></div>
+      ${[1,2,3,4].map(n=>`<div style="border-color:var(--v${n})"><b>${A.filter(p=>p.van===n).length}<small style="font-size:14px;color:var(--muted)">/${CAP}</small></b><span>Van ${n}</span></div>`).join('')}
+    </div></div>
+  <div class="bar"><div class="tabs" role="tablist">
+      ${[['staff','Staff'],['rooms','Rooms'],['vans','Vans']].map(([k,l])=>`<button class="tab" role="tab" aria-selected="${f.tab===k}" data-tab="${k}">${l}</button>`).join('')}</div>
+    <div class="filters">
+      <input class="inp q" id="fq" type="search" placeholder="Search name, Staff ID, room, van, position" value="${esc(f.q)}">
+      <select class="inp" id="fv" aria-label="Van"><option value="">All vans</option>${[1,2,3,4].map(n=>`<option value="${n}" ${f.van==String(n)?'selected':''}>Van ${n}</option>`).join('')}</select>
+      <select class="inp" id="fr" aria-label="Room"><option value="">All rooms</option><option value="__none" ${f.room==='__none'?'selected':''}>No room yet</option>${rooms.map(r=>`<option ${f.room===r?'selected':''} value="${esc(r)}">Room ${esc(r)}</option>`).join('')}</select>
+      <select class="inp" id="fp" aria-label="Position"><option value="">All positions</option><option value="__none" ${f.pos==='__none'?'selected':''}>No position</option>${P.filter(x=>A.some(p=>p.pos===x)).map(x=>`<option ${f.pos===x?'selected':''} value="${esc(x)}">${esc(x)}</option>`).join('')}</select>
+      <select class="inp" id="fc" aria-label="Company"><option value="">KBC + KLC</option><option ${f.co==='KBC'?'selected':''}>KBC</option><option ${f.co==='KLC'?'selected':''}>KLC</option></select>
+      <select class="inp" id="fg" aria-label="Gender"><option value="">All genders</option><option value="M" ${f.g==='M'?'selected':''}>Male</option><option value="F" ${f.g==='F'?'selected':''}>Female</option></select>
+      <button class="btn ghost sm" data-act="clear">Clear</button></div></div>
+  <div class="wrap" id="view">${f.tab==='staff'?staffView(F,adm):f.tab==='rooms'?roomView(F):vanView(A,F,adm)}</div>`;
+}
+
+function staffView(F,adm){
+  const allSel=F.length&&F.every(p=>sel.has(String(p.no)));
+  let h='';
+  if(adm&&sel.size)h+=`<div class="bulk"><b>${sel.size} selected</b>
+    <input class="inp" id="bulkroom" placeholder="Room number" aria-label="Room number for selected"><button class="btn sm" data-act="bulk">Set room</button>
+    <input class="inp" id="bulkpos" list="poslist" placeholder="Position" aria-label="Position for selected" style="font-family:inherit"><button class="btn sm" data-act="bulkpos">Set position</button>
+    <button class="btn ghost sm" data-act="bulkclear">Clear room</button><button class="btn ghost sm" data-act="unsel">Deselect</button></div>`;
+  h+=`<div class="list"><div class="row head ${adm?'adm':'noadm'}">${adm?`<input type="checkbox" data-act="selall" aria-label="Select all shown" ${allSel?'checked':''}>`:''}<span>Staff ID</span><span>Name</span><span>Position</span><span>Company</span><span>Sex</span><span>Van</span><span>Room</span></div>`;
+  if(!F.length)h+='<div class="empty">No staff match these filters.</div>';
+  for(const p of F){
+    h+=`<div class="row ${adm?'adm':'noadm'}">
+      ${adm?`<span class="c-ck"><input type="checkbox" data-sel="${esc(p.no)}" ${sel.has(String(p.no))?'checked':''} aria-label="Select ${esc(p.name)}"></span>`:''}
+      <span class="c-id mono">${esc(p.sid||'–')}</span>
+      <span class="c-nm nm">${esc(p.name)}${p.extra?'<em>new</em>':''}${adm&&p.extra?` <button class="rchg" data-rm="${esc(p.no)}">${rmPending===String(p.no)?'Sure? Remove':'Remove'}</button>`:''}</span>
+      <span class="c-pos">${adm?`<input class="room-in pos-in" data-pos="${esc(p.no)}" list="poslist" value="${esc(p.pos)}" placeholder="Position" aria-label="Position for ${esc(p.name)}">`:(p.pos?`<span class="ptag">${esc(p.pos)}</span>`:'<span class="room none">–</span>')}</span>
+      <span class="c-co co ${esc(p.company)}">${esc(p.company||'–')}</span>
+      <span class="c-g">${esc(p.gender)}</span>
+      <span class="c-van">${adm?`<select class="sel" data-van="${esc(p.no)}" aria-label="Van for ${esc(p.name)}"><option value="0" ${!p.van?'selected':''}>No van</option>${[1,2,3,4].map(n=>`<option value="${n}" ${p.van===n?'selected':''}>Van ${n}</option>`).join('')}</select>`:vchip(p.van)}</span>
+      <span class="c-room">${adm?`<input class="room-in" data-room="${esc(p.no)}" value="${esc(p.room)}" placeholder="Room" aria-label="Room for ${esc(p.name)}">`:roomTxt(p.room)}</span></div>`;
+  }
+  return h+'</div>';
+}
+
+function roomView(F){
+  const adm=me.admin;
+  const g={};F.forEach(p=>(g[p.room||'']??=[]).push(p));
+  const keys=Object.keys(g).filter(Boolean).sort(nat);
+  const ico='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>';
+  const card=(k,list)=>`<div class="rcard"><div class="rhead ${k?'':'un'}"><div class="rico">${ico}</div>
+    <div class="rtitle"><b>${k?'Room / Bungalow Room '+esc(k):'Not assigned yet'}</b><span>${k?'Occupants Group':'Waiting for a room'}</span></div>
+    <span class="rpill">${list.length} ${list.length==1?'Guest':'Guests'}</span></div>
+    <div class="rbody">${list.map((p,i)=>`<div class="rmem"><div><b>${i+1}. ${esc(p.name)}</b><small>${esc(p.company||'–')} • Van: ${p.van?'VAN '+p.van:'none'}${p.pos?' • '+esc(p.pos):''} • <span class="mono">${esc(p.sid||'–')}</span></small></div>
+      ${adm?(editing===String(p.no)?`<input class="rchg-in" data-room="${esc(p.no)}" value="${esc(p.room)}" placeholder="Room" aria-label="New room for ${esc(p.name)}">`:`<button class="rchg" data-edit="${esc(p.no)}">Change</button>`):''}</div>`).join('')}</div></div>`;
+  if(!F.length)return '<div class="empty">No staff match these filters.</div>';
+  return '<div class="cards rooms">'+keys.map(k=>card(k,g[k])).join('')+(g['']?card('',g['']):'')+'</div>';
+}
+
+function vanView(A,F,adm){
+  const ids=new Set(F.map(p=>String(p.no)));
+  return '<div class="cards vans">'+[1,2,3,4].map(n=>{
+    const members=A.filter(p=>p.van===n), shown=members.filter(p=>ids.has(String(p.no)));
+    const c=k=>members.filter(p=>p.company===k).length, s=k=>members.filter(p=>p.gender===k).length;
+    const plate=(vanMeta[n]||{}).plate||'';
+    const mgmt=members.filter(p=>/^(MD|GM)$/.test(p.pos)).map(p=>p.pos).join(', ');
+    return `<div class="card van v${n}"><h3>VAN ${n}<small>${members.length}/${CAP} seats</small></h3>
+      <div class="plate">Plate no.${adm?` <input class="inp" data-plate="${n}" value="${esc(plate)}" placeholder="Enter plate" aria-label="Plate number van ${n}">`:` <b class="mono" style="color:var(--ink)">${esc(plate)||'not set'}</b>`}</div>
+      <div class="stats"><span>KBC <b>${c('KBC')}</b></span><span>KLC <b>${c('KLC')}</b></span><span>Female <b>${s('F')}</b></span><span>Male <b>${s('M')}</b></span>${mgmt?`<span>Mgmt <b>${esc(mgmt)}</b></span>`:''}</div>
+      ${shown.length?shown.map(p=>`<div class="mem"><span>${esc(p.name)} <small class="mono">${esc(p.sid)}</small>${p.pos?` <small>· ${esc(p.pos)}</small>`:''}</span><small>${p.room?'Room '+esc(p.room):'no room'}</small></div>`).join(''):'<div class="hint">No one matches the filters.</div>'}</div>`;
+  }).join('')+'</div>';
+}
+
+/* ---------- saving (admin only) ---------- */
+const localNote=()=>toast('Saved on this screen only. Open the page signed in to Claude to share changes.');
+async function saveAssign(no,patch,quiet){
+  const p=baseOf(no); if(!p)return;
+  const cur=eff(p), key=String(no);
+  const next={room:(patch.room??cur.room).trim(),van:patch.van??cur.van,position:(patch.position??cur.pos).trim()};
+  const ref=dbOk?db.doc('assign/'+key):null;
+  try{
+    if(!next.room&&next.van===p.van&&next.position===basePos(p)){delete assign[key];if(ref)await ref.delete()}
+    else{assign[key]=next;if(ref)await ref.set(next)}
+    schedulePublish();
+    if(!ref&&!quiet)localNote();
+  }catch(e){toast('Could not save: '+(e.message||e.code))}
+}
+async function savePlate(n,v){
+  vanMeta[n]={plate:v.trim()};
+  try{if(dbOk)await db.doc('vans/'+n).set(vanMeta[n]);else localNote()}catch(e){toast('Could not save: '+(e.message||e.code))}
+  schedulePublish();render();
+}
+async function addStaff(d,quiet){
+  const id=newId(), rec={name:d.name,sid:d.sid||'',company:d.company||'',gender:d.gender||'M',role:d.role||'User'};
+  extras[id]=rec;
+  try{if(dbOk)await db.doc('staff/'+id).set(rec)}catch(e){toast('Could not save: '+(e.message||e.code))}
+  await saveAssign(id,{room:d.room||'',van:+d.van||0,position:d.position||''},true);
+  if(!dbOk&&!quiet)localNote();
+}
+async function removeStaff(id){
+  delete extras[id];delete assign[id];
+  try{if(dbOk){await db.doc('staff/'+id).delete();await db.doc('assign/'+id).delete()}}catch(e){toast('Could not remove: '+(e.message||e.code))}
+  schedulePublish();
+}
+
+/* ---------- main events ---------- */
+const appEl=document.getElementById('app');
+appEl.addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-edit]');
+  if(ed){editing=ed.dataset.edit;render();const i=document.querySelector('.rchg-in');if(i){i.focus();i.select()}return}
+  const rm=e.target.closest('[data-rm]');
+  if(rm){const id=rm.dataset.rm;if(rmPending===id){rmPending=null;await removeStaff(id);toast('Staff removed')}else rmPending=id;render();return}
+  const t=e.target.closest('[data-tab],[data-act]'); if(!t)return;
+  if(t.dataset.tab){f.tab=t.dataset.tab;render();return}
+  const a=t.dataset.act;
+  if(a==='logout')logout();
+  else if(a==='addopen'){panel='add';renderModal()}
+  else if(a==='upopen'){panel='upload';up=null;renderModal()}
+  else if(a==='clear'){f={...f,q:'',van:'',room:'',co:'',g:'',pos:''};render()}
+  else if(a==='selall'){const F=all().filter(match);if(t.checked)F.forEach(p=>sel.add(String(p.no)));else F.forEach(p=>sel.delete(String(p.no)));render()}
+  else if(a==='unsel'){sel.clear();render()}
+  else if(a==='bulk'||a==='bulkclear'||a==='bulkpos'){
+    const patch=a==='bulk'?{room:($('#bulkroom').value||'').trim()}:a==='bulkpos'?{position:($('#bulkpos').value||'').trim()}:{room:''};
+    if(a==='bulk'&&!patch.room){toast('Type a room number first.');return}
+    if(a==='bulkpos'&&!patch.position){toast('Type a position first.');return}
+    const n=sel.size;
+    for(const no of [...sel])await saveAssign(no,patch,true);
+    if(!dbOk)localNote();else toast(a==='bulk'?`Room ${patch.room} set for ${n} staff`:a==='bulkpos'?`Position "${patch.position}" set for ${n} staff`:`Room cleared for ${n} staff`);
+    sel.clear();render();
+  }
+  else if(a==='export')exportCsv();
+});
+appEl.addEventListener('change',e=>{
+  const t=e.target; if(!me)return;
+  if(t.id==='fv')f.van=t.value; else if(t.id==='fr')f.room=t.value; else if(t.id==='fc')f.co=t.value; else if(t.id==='fg')f.g=t.value; else if(t.id==='fp')f.pos=t.value;
+  else if(t.dataset.sel){t.checked?sel.add(t.dataset.sel):sel.delete(t.dataset.sel)}
+  else if(t.dataset.room&&me.admin){editing=null;saveAssign(t.dataset.room,{room:t.value}).then(render);return}
+  else if(t.dataset.pos&&me.admin){saveAssign(t.dataset.pos,{position:t.value}).then(render);return}
+  else if(t.dataset.van&&me.admin){saveAssign(t.dataset.van,{van:+t.value}).then(render);return}
+  else if(t.dataset.plate&&me.admin){savePlate(t.dataset.plate,t.value);return}
+  else if(t.dataset.act==='selall'||t.id==='fq'||t.id==='bulkroom'||t.id==='bulkpos'){return}
+  render();
+});
+appEl.addEventListener('focusout',e=>{if(e.target.classList?.contains('rchg-in')&&editing!==null){setTimeout(()=>{if(editing!==null){editing=null;render()}},150)}});
+appEl.addEventListener('input',e=>{
+  if(e.target.id==='fq'){f.q=e.target.value;const pos=e.target.selectionStart;render();const n=$('#fq');n.focus();n.setSelectionRange(pos,pos)}
+});
+
+/* ---------- export / template ---------- */
+const csvq=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+async function saveCsv(name,rows){
+  const csv='﻿'+rows.map(r=>r.map(csvq).join(',')).join('\r\n');
+  if(!dl){toast('Download is not available in this view.');return}
+  try{await dl.save({filename:name,data:csv});toast('File ready')}catch(e){toast('Download cancelled')}
+}
+function exportCsv(){
+  const rows=[['No','Staff ID','Name','Company','Gender','Van','Plate','Position','Room','Permission']];
+  all().forEach((p,i)=>rows.push([i+1,p.sid,p.name,p.company,p.gender,p.van||'',(vanMeta[p.van]||{}).plate||'',p.pos,p.room,p.role]));
+  saveCsv('Kirirom_room_van_list.csv',rows);
+}
+
+/* ---------- modal: add staff + upload ---------- */
+function renderModal(){
+  const m=$('#modal');
+  if(!panel||!me||!me.admin){m.innerHTML='';m.hidden=true;return}
+  m.hidden=false;
+  if(panel==='add'){
+    m.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mh"><h2 id="mt">Add staff</h2><button class="btn ghost sm" data-close aria-label="Close">Close</button></div>
+    <form id="addf" class="mf" autocomplete="off">
+      <div class="field"><label for="a_name">Full name</label><input class="inp" id="a_name" required></div>
+      <div class="g2"><div class="field"><label for="a_sid">Staff ID</label><input class="inp" id="a_sid" placeholder="Leave blank if none"></div>
+        <div class="field"><label for="a_pos">Position</label><input class="inp" id="a_pos" list="poslist" placeholder="e.g. Food"></div></div>
+      <div class="g3"><div class="field"><label for="a_co">Company</label><select class="inp" id="a_co"><option>KBC</option><option>KLC</option></select></div>
+        <div class="field"><label for="a_g">Gender</label><select class="inp" id="a_g"><option value="M">Male</option><option value="F">Female</option></select></div>
+        <div class="field"><label for="a_role">Access</label><select class="inp" id="a_role"><option>User</option><option>Admin</option></select></div></div>
+      <div class="g2"><div class="field"><label for="a_van">Van</label><select class="inp" id="a_van"><option value="0">No van</option>${[1,2,3,4].map(n=>`<option value="${n}">Van ${n}</option>`).join('')}</select></div>
+        <div class="field"><label for="a_room">Room number</label><input class="inp" id="a_room"></div></div>
+      <p class="err" id="a_err" role="alert"></p>
+      <div class="mh"><span class="hint">Staff with a Staff ID can log in with it.</span><button class="btn" type="submit">Add staff</button></div></form></div>`;
+    setTimeout(()=>$('#a_name')?.focus(),0);
+  }else{
+    m.innerHTML=`<div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="mt"><div class="mh"><h2 id="mt">Upload file</h2><button class="btn ghost sm" data-close aria-label="Close">Close</button></div>
+      <p class="hint">Upload an Excel (.xlsx) or CSV file. Rows are matched to existing staff by Staff ID, then by name. Matched staff get their Van, Room and Position updated. Names not found are added as new staff. Columns: Staff ID, Name, Company, Gender, Van, Room, Position, Permission (only Name is required).</p>
+      <div class="mh"><input type="file" id="u_file" accept=".xlsx,.xls,.csv" aria-label="Choose file"><button class="btn ghost sm" data-act2="tpl">Download template</button></div>
+      <div id="u_out">${up?planHtml():''}</div></div>`;
+  }
+}
+const HEAD={sid:['staffid','id','employeeid','staffno'],name:['name','fullname','staffname'],company:['company','org','organization'],gender:['gender','sex'],van:['van','vanno','vehicle','vannumber'],room:['room','roomnumber','roomno','bungalow','bungalowroom'],pos:['position','customlabel','team','remark','title','role'],perm:['permission','access']};
+function getf(row,key){
+  for(const [k,v] of Object.entries(row)){const nk=k.toLowerCase().replace(/[^a-z0-9]/g,'');if(HEAD[key].includes(nk)&&String(v).trim()!=='')return String(v).trim()}
+  return '';
+}
+function parseCsv(text){
+  const rows=[];let r=[],c='',q=false;text=text.replace(/^﻿/,'');
+  for(let i=0;i<text.length;i++){const ch=text[i];
+    if(q){if(ch==='"'){if(text[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true; else if(ch===','){r.push(c);c=''}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&text[i+1]==='\n')i++;r.push(c);c='';if(r.some(x=>x!==''))rows.push(r);r=[]}
+    else c+=ch}
+  r.push(c);if(r.some(x=>x!==''))rows.push(r);
+  if(!rows.length)return [];
+  const h=rows[0];return rows.slice(1).map(a=>Object.fromEntries(h.map((k,i)=>[k,a[i]??''])));
+}
+async function readRows(file){
+  if(/\.csv$/i.test(file.name))return parseCsv(await file.text());
+  if(!window.XLSX)throw new Error('Excel reader did not load. Save the sheet as CSV and upload that.');
+  const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:false});
+}
+function buildPlan(rows){
+  const cur=all(), plan={upd:[],add:[],same:0,skip:[]};
+  const seenNew=new Set();
+  rows.forEach((row,i)=>{
+    let sid=norm(getf(row,'sid')); if(sid==='N/A')sid='';
+    const name=getf(row,'name').replace(/\s+/g,' ');
+    const vanRaw=getf(row,'van'), vm=vanRaw.match(/[1-4]/), van=vm?+vm[0]:null;
+    const room=getf(row,'room'), pos=getf(row,'pos');
+    const g=getf(row,'gender').charAt(0).toUpperCase(), gender=g==='F'?'F':'M';
+    const co=getf(row,'company').toUpperCase();
+    const ex=(sid&&cur.find(p=>p.sid===sid))||(name&&cur.find(p=>nn(p.name)===nn(name)));
+    if(ex){
+      const patch={},ch=[];
+      if(room&&room!==ex.room){patch.room=room;ch.push('Room '+room)}
+      if(van&&van!==ex.van){patch.van=van;ch.push('Van '+van)}
+      if(pos&&pos!==ex.pos){patch.position=pos;ch.push('Position '+pos)}
+      if(ch.length)plan.upd.push({no:ex.no,name:ex.name,sid:ex.sid,patch,ch});else plan.same++;
+    }else if(!name){plan.skip.push(`Row ${i+2}: no name`)}
+    else{
+      const key=sid||nn(name); if(seenNew.has(key)){plan.skip.push(`Row ${i+2}: ${name} appears twice`);return}
+      seenNew.add(key);
+      const perm=getf(row,'perm');
+      plan.add.push({name,sid,company:co==='KBC'||co==='KLC'?co:'',gender,van:van||0,room,position:pos,role:/admin/i.test(perm)?'Admin':'User'});
+    }
+  });
+  return plan;
+}
+function planHtml(){
+  if(up.error)return `<p class="err">${esc(up.error)}</p>`;
+  const p=up.plan, n=p.upd.length+p.add.length;
+  return `<div class="stats"><span>Update <b>${p.upd.length}</b></span><span>New staff <b>${p.add.length}</b></span><span>No change <b>${p.same}</b></span><span>Skipped <b>${p.skip.length}</b></span></div>
+  <div class="prev">${p.upd.map(u=>`<div class="mem"><span>${esc(u.name)} <small class="mono">${esc(u.sid)}</small></span><small>${esc(u.ch.join(', '))}</small></div>`).join('')}
+    ${p.add.map(u=>`<div class="mem"><span>${esc(u.name)} <small class="mono">${esc(u.sid)}</small></span><small>New${u.van?' · Van '+u.van:''}${u.room?' · Room '+esc(u.room):''}${u.role==='Admin'?' · Admin':''}</small></div>`).join('')}
+    ${p.skip.map(s=>`<div class="mem"><small>${esc(s)}</small></div>`).join('')}</div>
+  <div class="mh"><span class="hint">${up.busy?'Applying…':n?'Review, then apply.':'Nothing to change.'}</span><button class="btn" data-act2="apply" ${n&&!up.busy?'':'disabled'}>Apply ${n} change${n==1?'':'s'}</button></div>`;
+}
+const modalEl=document.getElementById('modal');
+modalEl.addEventListener('click',async e=>{
+  if(e.target===modalEl||e.target.closest('[data-close]')){panel=null;up=null;renderModal();return}
+  const a=e.target.closest('[data-act2]')?.dataset.act2;
+  if(a==='tpl')saveCsv('Staff_upload_template.csv',[['Staff ID','Name','Company','Gender','Van','Room','Position','Permission']]);
+  if(a==='apply'&&up?.plan&&!up.busy){
+    up.busy=true;$('#u_out').innerHTML=planHtml();
+    const p=up.plan;
+    for(const u of p.upd)await saveAssign(u.no,u.patch,true);
+    for(const d of p.add)await addStaff(d,true);
+    const msg=`${p.upd.length} updated, ${p.add.length} added`;
+    panel=null;up=null;renderModal();render();
+    toast(dbOk?msg:msg+'. Saved on this screen only.');
+  }
+});
+modalEl.addEventListener('submit',async e=>{
+  if(e.target.id!=='addf')return; e.preventDefault();
+  const v=id=>($('#'+id).value||'').trim(), err=m=>$('#a_err').textContent=m;
+  const name=v('a_name').replace(/\s+/g,' '), sid=norm(v('a_sid'));
+  if(!name)return err('Enter a name.');
+  if(sid&&allBase().some(p=>p.sid===sid))return err('That Staff ID already exists.');
+  await addStaff({name,sid,company:v('a_co'),gender:v('a_g'),role:v('a_role'),van:v('a_van'),room:v('a_room'),position:v('a_pos')});
+  panel=null;renderModal();render();toast(name+' added');
+});
+modalEl.addEventListener('change',async e=>{
+  if(e.target.id!=='u_file'||!e.target.files[0])return;
+  try{up={plan:buildPlan(await readRows(e.target.files[0]))}}catch(x){up={error:x.message||'Could not read this file.'}}
+  $('#u_out').innerHTML=planHtml();
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&panel){panel=null;up=null;renderModal()}});
+
+/* ---------- publish to the link (so people without a Claude sign-in see updates) ---------- */
+const SK_HEAD='<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>\n';
+const lt=t=>t.replace(/</g,'\\u003c');
+function setPub(m){pubMsg=m;const e=$('#pub');if(e)e.textContent=m}
+function buildHtml(){
+  const TPL=JSON.parse(document.getElementById('tpl').textContent);
+  const st={assign,vans:vanMeta,staff:extras};
+  const re=new RegExp('/\\*SN'+'AP\\*/[\\s\\S]*?/\\*EN'+'D\\*/');
+  const body=TPL.replace(re,()=>'/*SN'+'AP*/'+lt(JSON.stringify(st))+'/*EN'+'D*/');
+  const blk='<scr'+'ipt id="tpl" type="application/json">'+lt(JSON.stringify(TPL))+'<\/script>';
+  return SK_HEAD+body+'\n'+blk+'</body></html>';
+}
+let pubT=null;
+function schedulePublish(){
+  if(!me?.admin||!art)return;
+  setPub('Changes pending…');clearTimeout(pubT);pubT=setTimeout(doPublish,4000);
+}
+async function doPublish(){
+  const ae=document.activeElement;
+  if(panel||(ae&&/^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName))){pubT=setTimeout(doPublish,3000);return}
+  setPub('Publishing…');
+  try{await art.publish(buildHtml())}
+  catch(e){
+    if(e&&e.code==='conflict')return;
+    setPub(e&&(e.code==='not_writer'||e.code==='not_granted')?'Not published to the link: only the page owner can publish.':'Publish failed: '+((e&&e.code)||'error'));
+    if(e&&(e.code==='not_writer'||e.code==='not_granted'))toast('Updates are shared with signed-in viewers only. The page owner must be the one to edit so everyone with the link sees them.');
+  }
+}
+
+/* ---------- shared storage, lights up when available ---------- */
+(async()=>{
+  if(!window.claude?.use)return;
+  try{dl=await claude.use('downloads')}catch(e){}
+  try{art=await claude.use('artifact')}catch(e){}
+  try{
+    db=await claude.use('db'); if(!db)return; dbOk=true;
+    subscribeDb();
+  }catch(e){}
+})();
+function subscribeDb(){
+    const live=()=>{if(document.activeElement?.matches?.('.room-in,.rchg-in,.plate .inp,#bulkroom,#bulkpos'))return;render()};
+    const cnt=k=>Object.keys(SNAP[k]||{}).length;
+    db.collection('assign').onSnapshot(s=>{if(s.empty&&cnt('assign'))return;assign={};s.docs.forEach(d=>assign[d.id]=d.data());live()},()=>{});
+    db.collection('vans').onSnapshot(s=>{if(s.empty&&cnt('vans'))return;vanMeta={};s.docs.forEach(d=>vanMeta[d.id]=d.data());live()},()=>{});
+    db.collection('staff').onSnapshot(s=>{if(s.empty&&cnt('staff'))return;extras={};s.docs.forEach(d=>extras[d.id]=d.data());live()},()=>{});
+}
+if(FB){subscribeDb();}
+if(!window.claude?.use){dl={save:async({filename,data})=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}}}
+render();
+</script>
+
+</body></html>
