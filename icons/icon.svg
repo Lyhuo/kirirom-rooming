@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#1d5a43"/>
+  <rect x="100" y="390" width="312" height="12" rx="6" fill="#b85f0f"/>
+  <!-- Mountain -->
+  <polygon points="256,112 128,370 384,370" fill="#2a7a58"/>
+  <polygon points="256,112 215,195 297,195" fill="#f0f5f0"/>
+  <!-- Pine Tree -->
+  <polygon points="256,180 180,370 332,370" fill="#15251d"/>
+  <!-- Star / Accent -->
+  <circle cx="256" cy="286" r="30" fill="#ffffff"/>
+  <circle cx="256" cy="286" r="18" fill="#b85f0f"/>
+</svg>

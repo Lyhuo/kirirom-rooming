@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json.schemastore.org/web-manifest-combined.json",
+  "id": "kirirom-rooming-outing-2026",
+  "name": "Kirirom Rooming & Outing 2026",
+  "short_name": "Kirirom 2026",
+  "description": "Kubota Outing 2026: Room Allocation, Bus Management, QR Attendance & Game Leaderboard",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#15251d",
+  "theme_color": "#1d5a43",
+  "lang": "km",
+  "dir": "ltr",
+  "categories": ["productivity", "events", "travel"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "QR Pass ផ្ទាល់ខ្លួន",
+      "short_name": "QR Pass",
+      "description": "បើកប័ណ្ណ Digital QR Pass ផ្ទាល់ខ្លួន",
+      "url": "./index.html?action=qr",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "កាលវិភាគកម្មវិធី",
+      "short_name": "កាលវិភាគ",
+      "description": "មើលកាលវិភាគកម្មវិធីដំណើរកម្សាន្ត",
+      "url": "./index.html?action=schedule",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "តារាងពិន្ទុហ្គេម",
+      "short_name": "Leaderboard",
+      "description": "មើលពិន្ទុប្រកួតប្រជែងផ្ទាល់",
+      "url": "./index.html?action=scores",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
