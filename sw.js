@@ -1,5 +1,5 @@
 // Service Worker for Kirirom Rooming & Outing 2026 PWA
-const CACHE_NAME = 'krr-outing-v2026.7';
+const CACHE_NAME = 'krr-outing-v2026.8';
 
 const STATIC_ASSETS = [
   './',

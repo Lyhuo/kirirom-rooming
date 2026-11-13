@@ -881,6 +881,114 @@
       letter-spacing: -0.01em;
     }
 
+    /* Clean Segmented Control */
+    .ext-clean-segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--bg);
+      padding: 3px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      margin-bottom: 8px;
+      gap: 4px;
+    }
+    .ext-seg-btn {
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+    .ext-seg-btn.active {
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      font-weight: 700;
+    }
+    .ext-seg-btn.disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* Unified Progress & Camera Bar */
+    .ext-unified-scan-card {
+      background: var(--soft);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 9px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .ext-usc-left {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .ext-usc-metric {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .ext-usc-count {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+    .ext-usc-label {
+      font-size: 11.5px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .ext-usc-bar {
+      height: 6px;
+      background: color-mix(in srgb, var(--line) 85%, transparent);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .ext-usc-bar-fill {
+      height: 100%;
+      background: var(--pine);
+      border-radius: 99px;
+      transition: width 0.25s ease;
+    }
+    .ext-usc-sub {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .ext-usc-sub b {
+      color: var(--ink);
+    }
+    .ext-usc-scan-btn {
+      flex-shrink: 0;
+      padding: 9px 13px !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      border-radius: 10px !important;
+      gap: 5px !important;
+      background: var(--pine) !important;
+      color: var(--pine-ink) !important;
+      box-shadow: 0 4px 12px rgba(29, 90, 67, 0.22) !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+
     /* Confirmation Modal (Safety Guard on Revoke) */
     .ext-confirm-ov {
       position: fixed;
@@ -1403,7 +1511,7 @@
         grid-template-columns: 1fr 1fr !important;
       }
       #ext-att-list {
-        max-height: 48dvh !important;
+        max-height: 55dvh !important;
       }
       .ext-att-row {
         gap: 8px !important;
@@ -1518,7 +1626,7 @@
     }
   }
 
-  function openModal(title, contentHtml, isWide = false) {
+  function openModal(title, contentHtml, isWide = false, headerActionsHtml = '') {
     closeModal();
     const ov = document.createElement('div');
     ov.className = 'ext-modal-ov';
@@ -1526,8 +1634,13 @@
       <div class="ext-modal ${isWide ? 'ext-modal-wide' : ''}" role="dialog" aria-modal="true">
         <div class="ext-drag-handle" style="width:36px;height:4px;background:var(--line);border-radius:99px;margin:0 auto 2px auto;display:none;"></div>
         <div class="ext-modal-header">
-          <h2>${title}</h2>
-          <button class="btn ghost sm" id="ext-close-btn" style="padding:4px 10px;border-radius:8px;font-size:12px;white-space:nowrap;flex-shrink:0;">✕ បិទ</button>
+          <div style="min-width:0;flex:1 1 auto;">
+            <h2>${title}</h2>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+            ${headerActionsHtml || ''}
+            <button class="btn ghost sm" id="ext-close-btn" style="padding:4px 10px;border-radius:8px;font-size:12px;white-space:nowrap;flex-shrink:0;">✕ បិទ</button>
+          </div>
         </div>
         <div class="ext-modal-body">${contentHtml}</div>
       </div>
@@ -1808,96 +1921,95 @@
     }
 
     let html = `
-      <div class="ext-chk-user-card" style="background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:12px;">
-        <div style="min-width:0;flex:1 1 auto;">
-          <span style="font-size:11px;text-transform:uppercase;font-weight:700;color:var(--pine);display:block;margin-bottom:2px;">${roleBadge || 'Check-in Committee'}</span>
-          <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;">
-            <b style="font-size:15px;color:var(--ink);">${activeStaff ? activeStaff.name : 'Staff'}</b>
-            ${activeStaff && activeStaff.sid ? `<small class="mono" style="color:var(--muted)">(${activeStaff.sid})</small>` : ''}
-            ${activeStaff && activeStaff.van ? `<small style="color:var(--muted)">• ឡាន: <b>${activeStaff.van}</b></small>` : ''}
-          </div>
-        </div>
-        ${activeStaff ? `
-          <button class="btn sm" id="ext-switch-to-pass-btn" style="font-size:12px;padding:6px 12px;white-space:nowrap;border-radius:8px;">
-            🎫 មើល QR Pass ផ្ទាល់ខ្លួន
-          </button>
-        ` : ''}
-      </div>
-
-      <!-- Top Session Switcher Tabs (Transportation vs Activity) -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--bg);padding:4px;border-radius:12px;border:1px solid var(--line);margin-bottom:12px;" id="ext-session-tabs">
-        <button class="btn sm ext-session-tab ${activeSession === 'bus' ? 'active' : 'ghost'}" data-session="bus" style="font-size:12px;padding:8px 4px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:8px;${!canDoBus ? 'opacity:0.35;cursor:not-allowed;' : ''}" title="${!canDoBus ? '🔒 សម្រាប់តែគណៈកម្មការ Transportation' : ''}">
+      <!-- Top Session Switcher Tabs (Clean Segmented Control) -->
+      <div class="ext-clean-segmented" id="ext-session-tabs">
+        <button class="ext-seg-btn ext-session-tab ${activeSession === 'bus' ? 'active' : ''} ${!canDoBus ? 'disabled' : ''}" data-session="bus" title="${!canDoBus ? '🔒 សម្រាប់តែគណៈកម្មការ Transportation' : ''}">
           ${!canDoBus ? '🔒 ' : ''}🚌 ឡើងឡាន (Bus)
         </button>
-        <button class="btn sm ext-session-tab ${activeSession === 'night' ? 'active' : 'ghost'}" data-session="night" style="font-size:12px;padding:8px 4px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:8px;${!canDoNight ? 'opacity:0.35;cursor:not-allowed;' : ''}" title="${!canDoNight ? '🔒 សម្រាប់តែគណៈកម្មការ Activity Team' : ''}">
+        <button class="ext-seg-btn ext-session-tab ${activeSession === 'night' ? 'active' : ''} ${!canDoNight ? 'disabled' : ''}" data-session="night" title="${!canDoNight ? '🔒 សម្រាប់តែគណៈកម្មការ Activity Team' : ''}">
           ${!canDoNight ? '🔒 ' : ''}🌙 កម្មវិធីយប់ (Gala)
         </button>
       </div>
 
-      <!-- Section: Bus Selection Bar (Visible in 'bus' session) -->
-      <div id="ext-bus-controls-wrapper" style="${activeSession === 'bus' ? '' : 'display:none;'}margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
-          <span>🚌 ឡានដែលត្រូវ Check-in វត្តមាន:</span>
-          ${isCoordinatorLocked ? `<span style="font-size:11px;color:var(--pine);background:var(--soft);padding:2px 8px;border-radius:99px;border:1px solid var(--line);">🔒 ទទួលបន្ទុកផ្តាច់មុខ ${getBusLabel(coordinatorBus)}</span>` : ''}
-        </div>
-        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;" id="ext-bus-tabs">
+      <!-- Bus Selector Chips (Swipeable Horizontal Scroll) -->
+      <div id="ext-bus-controls-wrapper" style="${activeSession === 'bus' ? '' : 'display:none;'}margin-bottom:8px;">
+        <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px;-webkit-overflow-scrolling:touch;" id="ext-bus-tabs">
           ${['Airbus1', 'Airbus2', 'Airbus3', 'Airbus4', 'VIP', 'all'].map(k => {
             const st = getBusStats(k);
             const isMyBus = k === coordinatorBus;
             const isLockedOther = isCoordinatorLocked && !isMyBus;
             return `
-              <button class="btn sm ext-bus-tab ${k === activeBus ? 'active' : 'ghost'}" data-bus="${k}" style="white-space:nowrap;font-size:12px;padding:6px 12px;flex-shrink:0;border-radius:8px;${isLockedOther ? 'opacity:0.45;' : ''}" title="${isLockedOther ? 'លោកអ្នកអាច Check-in បានតែ ' + getBusLabel(coordinatorBus) : ''}">
-                ${isLockedOther ? '🔒 ' : ''}${st.label} <b style="opacity:0.85;">(${st.total})</b>
+              <button class="btn sm ext-bus-tab ${k === activeBus ? 'active' : 'ghost'}" data-bus="${k}" style="white-space:nowrap;font-size:11px;padding:4px 10px;flex-shrink:0;border-radius:8px;${isLockedOther ? 'opacity:0.45;' : ''}" title="${isLockedOther ? 'លោកអ្នកអាច Check-in បានតែ ' + getBusLabel(coordinatorBus) : ''}">
+                ${isLockedOther ? '🔒 ' : ''}${st.label} <b>(${st.total})</b>
               </button>
             `;
           }).join('')}
         </div>
       </div>
 
-      <!-- Section: Night Event Banner (Visible in 'night' session) -->
-      <div id="ext-night-banner-wrapper" style="${activeSession === 'night' ? '' : 'display:none;'}margin-bottom:10px;background:linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.12));border:1px solid rgba(124,58,237,0.25);border-radius:12px;padding:10px 14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-          <div>
-            <b style="color:#5b21b6;font-size:13.5px;display:block;">🌙 កម្មវិធីរាត្រីសមោសរ (Gala Dinner & Party)</b>
-            <span style="font-size:11.5px;color:var(--muted);">🎯 Activity Team ស្កេនទទួលភ្ញៀវបុគ្គលិកទាំងអស់ (១៥៧ នាក់)</span>
+      <!-- Night Event Compact Banner -->
+      <div id="ext-night-banner-wrapper" style="${activeSession === 'night' ? '' : 'display:none;'}margin-bottom:8px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#6d28d9;font-size:11.5px;font-weight:600;">🌙 កម្មវិធីរាត្រីសមោសរ (បុគ្គលិក ១៥៧ នាក់)</span>
+        <span style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;">Hall Gate</span>
+      </div>
+
+      <!-- Unified Progress & Camera Scan Bar (Streamlined) -->
+      <div class="ext-unified-scan-card" id="ext-unified-scan-box">
+        <div class="ext-usc-left">
+          <div class="ext-usc-metric">
+            <span class="ext-usc-count" id="ext-progress-count">0 / 33 នាក់</span>
+            <span class="ext-usc-label" id="ext-progress-label">បានឡើង (0%)</span>
           </div>
-          <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;">Hall Gate</span>
+          <div class="ext-usc-bar">
+            <div class="ext-usc-bar-fill" id="ext-progress-fill" style="width:0%;"></div>
+          </div>
+          <div class="ext-usc-sub" id="ext-progress-sub">
+            <span>✅ បានឡើង: <b id="ext-count-done">0</b></span>
+            <span>•</span>
+            <span>⏳ នៅសល់: <b id="ext-count-left" style="color:var(--amber);">33</b></span>
+          </div>
         </div>
-      </div>
-
-      <!-- Active Progress Card -->
-      <div id="ext-checkin-progress-card" style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px;"></div>
-
-      <div class="ext-chk-actions-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-        <button class="btn sm" id="ext-start-scan-btn" style="background:var(--pine);color:var(--pine-ink);font-weight:700;padding:9px 10px;font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;">
-          📷 បើកកាមេរ៉ាស្កេន
-        </button>
-        <button class="btn ghost sm" id="ext-export-att-btn" style="padding:9px 10px;font-size:12.5px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:10px;">
-          📥 Export CSV
+        <button class="btn sm ext-usc-scan-btn" id="ext-start-scan-btn">
+          📷 ស្កេន QR
         </button>
       </div>
 
-      <div id="ext-reader-box" style="display:none;margin-bottom:16px;">
+      <!-- Camera Drawer (Expands cleanly right under the scan button) -->
+      <div id="ext-reader-box" style="display:none;margin-bottom:10px;background:var(--bg);padding:8px;border-radius:12px;border:1px solid var(--line);">
         <div id="ext-reader"></div>
-        <button class="btn ghost sm" id="ext-stop-scan-btn" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;">បិទកាមេរ៉ា (Close Camera)</button>
+        <button class="btn ghost sm" id="ext-stop-scan-btn" style="margin-top:6px;width:100%;padding:6px;border-radius:8px;font-size:11.5px;">✕ បិទកាមេរ៉ា (Close Camera)</button>
       </div>
 
-      <div id="ext-scan-feedback" style="display:none;margin-bottom:14px;"></div>
+      <div id="ext-scan-feedback" style="display:none;margin-bottom:10px;"></div>
 
-      <!-- Status Sub-Filter Chips -->
-      <div style="margin-top:4px;">
-        <div style="display:flex;gap:6px;margin-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;" id="ext-status-chips">
-          <button class="btn sm ext-status-chip active" data-status="all" style="white-space:nowrap;flex-shrink:0;font-size:12px;padding:5px 12px;">ទាំងអស់</button>
-          <button class="btn ghost sm ext-status-chip" data-status="checked" style="white-space:nowrap;flex-shrink:0;font-size:12px;padding:5px 12px;">✅ បាន Check-in</button>
-          <button class="btn ghost sm ext-status-chip" data-status="pending" style="white-space:nowrap;flex-shrink:0;font-size:12px;padding:5px 12px;color:var(--amber);">⏳ មិនទាន់ Check-in</button>
+      <!-- Search & Status Filter Toolbar (Unified & Compact) -->
+      <div style="margin-bottom:8px;display:grid;gap:6px;">
+        <input class="inp" id="ext-att-search" placeholder="🔍 ស្វែងរកឈ្មោះ, Staff ID, ឬ ឡាន..." style="width:100%;padding:7px 11px;font-size:12px;border-radius:9px;">
+        <div style="display:flex;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;" id="ext-status-chips">
+          <button class="btn sm ext-status-chip active" data-status="all" style="white-space:nowrap;flex-shrink:0;font-size:11px;padding:4px 9px;border-radius:7px;">ទាំងអស់ (33)</button>
+          <button class="btn ghost sm ext-status-chip" data-status="checked" style="white-space:nowrap;flex-shrink:0;font-size:11px;padding:4px 9px;border-radius:7px;">✅ បានឡើង (0)</button>
+          <button class="btn ghost sm ext-status-chip" data-status="pending" style="white-space:nowrap;flex-shrink:0;font-size:11px;padding:4px 9px;border-radius:7px;color:var(--amber);">⏳ មិនទាន់ឡើង (33)</button>
         </div>
+      </div>
 
-        <input class="inp" id="ext-att-search" placeholder="🔍 ស្វែងរកឈ្មោះ, Staff ID, ឬ ឡាន..." style="width:100%;margin-bottom:10px;padding:9px 12px;font-size:13px;border-radius:10px;">
-        <div id="ext-att-list" style="max-height:46vh;overflow-y:auto;display:grid;gap:8px;-webkit-overflow-scrolling:touch;padding-right:2px;"></div>
+      <div id="ext-att-list" style="max-height:56dvh;overflow-y:auto;display:grid;gap:6px;-webkit-overflow-scrolling:touch;padding-right:2px;"></div>
+    `;
+
+    const titleHtml = `
+      <div style="min-width:0;">
+        <div style="font-size:15px;font-weight:700;line-height:1.2;">🎫 Check-in វត្តមាន</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;">
+          👤 <b>${activeStaff ? activeStaff.name : 'Staff'}</b> • <span style="color:var(--pine);font-weight:600;">${roleBadge || 'គណៈកម្មការ'}</span>
+        </div>
       </div>
     `;
 
-    openModal('🎫 Check-in វត្តមាន & Scan QR', html, true);
+    const headerActionsHtml = `
+      ${activeStaff ? `<button class="btn ghost sm" id="ext-switch-to-pass-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="មើល QR Pass ផ្ទាល់ខ្លួន">🎫 Pass ខ្ញុំ</button>` : ''}
+      <button class="btn ghost sm" id="ext-export-att-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="Export CSV">📥 CSV</button>
+    `;
+
+    openModal(titleHtml, html, true, headerActionsHtml);
 
     const attList = document.getElementById('ext-att-list');
     const searchInp = document.getElementById('ext-att-search');
@@ -1913,27 +2025,28 @@
     }
 
     function updateProgressCard() {
-      const card = document.getElementById('ext-checkin-progress-card');
-      const exportLabel = document.getElementById('ext-export-label');
+      const countEl = document.getElementById('ext-progress-count');
+      const labelEl = document.getElementById('ext-progress-label');
+      const fillEl = document.getElementById('ext-progress-fill');
+      const doneEl = document.getElementById('ext-count-done');
+      const leftEl = document.getElementById('ext-count-left');
+      const subEl = document.getElementById('ext-progress-sub');
 
       if (activeSession === 'bus') {
         const st = getBusStats(activeBus);
-        if (exportLabel) exportLabel.textContent = st.label;
-
-        if (card) {
-          card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <b style="font-size:15px;color:var(--pine);">🚌 វត្តមានឡើងឡាន: ${st.label}</b>
-              <span style="font-size:13px;"><b>${st.checked} / ${st.total} នាក់</b> (${st.pct}%)</span>
-            </div>
-            <div style="background:var(--line);height:8px;border-radius:99px;overflow:hidden;margin-bottom:8px;">
-              <div style="background:var(--pine);width:${st.pct}%;height:100%;transition:width 0.3s ease;"></div>
-            </div>
-            <div style="display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
-              <span>✅ បានឡើងឡាន: <b style="color:var(--pine);font-size:13px;">${st.checked}</b> នាក់</span>
-              <span>⏳ នៅសល់មិនទាន់ឡើង: <b style="color:${st.pending > 0 ? '#b85f0f' : 'var(--muted)'};font-size:13px;">${st.pending}</b> នាក់</span>
-            </div>
-          `;
+        if (countEl) countEl.textContent = `${st.checked} / ${st.total} នាក់`;
+        if (labelEl) labelEl.textContent = `បានឡើង (${st.pct}%)`;
+        if (fillEl) {
+          fillEl.style.width = `${st.pct}%`;
+          fillEl.style.background = 'var(--pine)';
+        }
+        if (doneEl) doneEl.textContent = `${st.checked}`;
+        if (leftEl) {
+          leftEl.textContent = `${st.pending}`;
+          leftEl.style.color = st.pending > 0 ? '#b85f0f' : 'var(--muted)';
+        }
+        if (subEl) {
+          subEl.innerHTML = `<span>✅ បានឡើង: <b>${st.checked}</b></span> • <span>⏳ នៅសល់: <b style="color:${st.pending > 0 ? '#b85f0f' : 'var(--muted)'}">${st.pending}</b></span>`;
         }
 
         // Update status chip badges
@@ -1941,7 +2054,7 @@
         chips.forEach(c => {
           const s = c.dataset.status;
           if (s === 'all') c.innerHTML = `ទាំងអស់ (${st.total})`;
-          if (s === 'checked') c.innerHTML = `✅ ឡើងឡាន (${st.checked})`;
+          if (s === 'checked') c.innerHTML = `✅ បានឡើង (${st.checked})`;
           if (s === 'pending') c.innerHTML = `⏳ មិនទាន់ឡើង (${st.pending})`;
         });
 
@@ -1954,30 +2067,26 @@
       } else {
         // NIGHT EVENT (Activity Team)
         const st = getNightStats();
-        if (exportLabel) exportLabel.textContent = 'Gala Night';
-
-        if (card) {
-          card.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-              <b style="font-size:15px;color:#7c3aed;">🌙 វត្តមានសាលកម្មវិធីពេលយប់ (Gala Dinner)</b>
-              <span style="font-size:13px;"><b>${st.checked} / ${st.total} នាក់</b> (${st.pct}%)</span>
-            </div>
-            <div style="background:var(--line);height:8px;border-radius:99px;overflow:hidden;margin-bottom:8px;">
-              <div style="background:linear-gradient(90deg, #7c3aed, #ec4899);width:${st.pct}%;height:100%;transition:width 0.3s ease;"></div>
-            </div>
-            <div style="display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap;">
-              <span>✅ បានចូលរួម: <b style="color:#7c3aed;font-size:13px;">${st.checked}</b> នាក់</span>
-              <span>⏳ នៅសល់មិនទាន់ចូល: <b style="color:${st.pending > 0 ? '#b85f0f' : 'var(--muted)'};font-size:13px;">${st.pending}</b> នាក់</span>
-            </div>
-          `;
+        if (countEl) countEl.textContent = `${st.checked} / ${st.total} នាក់`;
+        if (labelEl) labelEl.textContent = `បានចូល (${st.pct}%)`;
+        if (fillEl) {
+          fillEl.style.width = `${st.pct}%`;
+          fillEl.style.background = 'linear-gradient(90deg, #7c3aed, #ec4899)';
+        }
+        if (doneEl) doneEl.textContent = `${st.checked}`;
+        if (leftEl) {
+          leftEl.textContent = `${st.pending}`;
+          leftEl.style.color = st.pending > 0 ? '#b85f0f' : 'var(--muted)';
+        }
+        if (subEl) {
+          subEl.innerHTML = `<span>✅ បានចូល: <b>${st.checked}</b></span> • <span>⏳ នៅសល់: <b style="color:${st.pending > 0 ? '#b85f0f' : 'var(--muted)'}">${st.pending}</b></span>`;
         }
 
-        // Update status chip badges
         const chips = document.querySelectorAll('.ext-status-chip');
         chips.forEach(c => {
           const s = c.dataset.status;
           if (s === 'all') c.innerHTML = `ទាំងអស់ (${st.total})`;
-          if (s === 'checked') c.innerHTML = `✅ បានចូលរួម (${st.checked})`;
+          if (s === 'checked') c.innerHTML = `✅ បានចូល (${st.checked})`;
           if (s === 'pending') c.innerHTML = `⏳ មិនទាន់ចូល (${st.pending})`;
         });
       }
@@ -2115,7 +2224,7 @@
     }
 
     // Session tab switcher (Transportation vs Activity)
-    document.querySelectorAll('.ext-session-tab').forEach(tab => {
+    document.querySelectorAll('.ext-session-tab, .ext-seg-btn').forEach(tab => {
       tab.onclick = () => {
         const targetSession = tab.dataset.session;
         if (targetSession === 'bus' && !canDoBus) {
@@ -2126,10 +2235,10 @@
           alert('⛔ មិនអនុញ្ញាតឡើយ!\n\nលោកអ្នកជាគណៈកម្មការដឹកជញ្ជូន (Transportation) មិនមានសិទ្ធិ Scan Check-in កម្មវិធីពេលយប់ឡើយ! មុខងារនេះសម្រាប់តែគណៈកម្មការ Activity Team ប៉ុណ្ណោះ។');
           return;
         }
-        document.querySelectorAll('.ext-session-tab').forEach(t => {
-          t.className = 'btn sm ext-session-tab ghost';
+        document.querySelectorAll('.ext-session-tab, .ext-seg-btn').forEach(t => {
+          t.classList.remove('active');
         });
-        tab.className = 'btn sm ext-session-tab active';
+        tab.classList.add('active');
         activeSession = targetSession;
 
         const busControls = document.getElementById('ext-bus-controls-wrapper');
