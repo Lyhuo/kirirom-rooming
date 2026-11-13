@@ -1697,18 +1697,25 @@
         font-size: 11.5px !important;
       }
       .ext-nav-dock {
-        bottom: max(8px, calc(4px + env(safe-area-inset-bottom, 0px)));
-        padding: 5px 8px;
-        gap: 4px;
-        max-width: 98vw;
+        bottom: max(10px, calc(6px + env(safe-area-inset-bottom, 0px)));
+        padding: 4px 6px !important;
+        gap: 2px !important;
+        width: calc(100% - 16px) !important;
+        max-width: 420px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        box-sizing: border-box !important;
       }
       .ext-nav-btn {
-        padding: 7px 11px;
-        font-size: 12px;
-        gap: 4px;
+        padding: 6px 3px !important;
+        font-size: 10.5px !important;
+        gap: 2px !important;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+        justify-content: center !important;
       }
       .ext-nav-btn .icon {
-        font-size: 15px;
+        font-size: 13.5px !important;
       }
       .ext-modal-ov, .ov {
         width: 100vw !important;
@@ -4285,6 +4292,1010 @@
     }
   }
 
+
+  // =========================================================
+  // Feature 16: Interactive Resort Map, Room Zone Finder & GPS Navigation
+  // =========================================================
+  const RESORT_DATA = {
+    name: 'vKirirom Pine Resort',
+    khmerName: 'រមណីយដ្ឋាន គិរីរម្យ (vKirirom Pine Resort)',
+    coords: { lat: 11.3197, lon: 104.0583 },
+    altitude: '៦២៦ ម៉ែត្រលើនីវ៉ូទឹកសមុទ្រ',
+    description: 'រមណីយដ្ឋានបែបធម្មជាតិព័ទ្ធជុំវិញដោយព្រៃស្រល់ខៀវស្រងាត់ លើឧទ្យានជាតិព្រះសុរាម្រិត-កុសមៈ គិរីរម្យ',
+    zones: {
+      A: {
+        name: 'Zone A (Pine Villa)',
+        khmerName: 'តំបន់ផ្ទះវីឡាស្រល់ A (Pine Villa A)',
+        range: 'A001 – A016 (១៦ បន្ទប់)',
+        location: 'ភាគពាយព្យ (North-West Pine Ridge)',
+        nearby: 'ច្រកចូលធំ, ចំណតរថយន្ត Airbus 1-4, ប៉ុស្តិ៍សង្គ្រោះបឋម',
+        walkingGuide: 'ដើរពី Reception ត្រង់ទៅទិសខាងលិច ប្រហែល ១-២ នាទី (~១០០ ម៉ែត្រ)',
+        coords: { lat: 11.3208, lon: 104.0572 },
+        color: '#10b981',
+        pinCoords: { x: 135, y: 155 },
+        desc: 'តំបន់ផ្ទះវីឡាឈើស្រល់ ស្ងប់ស្ងាត់ មានផាសុកភាព ជិតចំណតរថយន្ត'
+      },
+      B: {
+        name: 'Zone B (Pine Villa)',
+        khmerName: 'តំបន់ផ្ទះវីឡាស្រល់ B (Pine Villa B)',
+        range: 'B001 – B016 (១៦ បន្ទប់)',
+        location: 'ភាគឦសាន (North-East Ridge)',
+        nearby: 'ទីលានលេងហ្គេម Team Building, ផ្លូវដើរព្រៃ Hiking Trail',
+        walkingGuide: 'ដើរពី Reception ទៅខាងស្តាំដៃកាត់តាមសួនស្រល់ ប្រហែល ២-៣ នាទី (~១៨០ ម៉ែត្រ)',
+        coords: { lat: 11.3216, lon: 104.0594 },
+        color: '#3b82f6',
+        pinCoords: { x: 600, y: 125 },
+        desc: 'តំបន់ផ្ទះវីឡាជិតទីលានសកម្មភាព Team Building & Hiking'
+      },
+      C: {
+        name: 'Zone C (Deluxe Villa)',
+        khmerName: 'តំបន់វីឡាកណ្តាលសួន C (Deluxe Villa C)',
+        range: 'C001 – C012 (១២ បន្ទប់)',
+        location: 'កណ្តាលរីហ្សត (Central Resort Core)',
+        nearby: 'អាងហែលទឹក Pine Pool, ភោជនីយដ្ឋានធំ Pine View, Reception',
+        walkingGuide: 'ដើរពី Reception ត្រឹមតែ ៥០ ម៉ែត្រ ជាប់នឹងអាងហែលទឹក (~១ នាទី)',
+        coords: { lat: 11.3200, lon: 104.0585 },
+        color: '#f59e0b',
+        pinCoords: { x: 320, y: 245 },
+        desc: 'តំបន់កណ្តាលងាយស្រួលធ្វើដំណើរ ជាប់អាងហែលទឹក និងភោជនីយដ្ឋាន'
+      },
+      D: {
+        name: 'Zone D (Luxury Tent & Villa)',
+        khmerName: 'តំបន់ជ្រលងស្រល់ & តង់ប្រណិត D (Zone D)',
+        range: 'D001 – D018 (១៨ បន្ទប់)',
+        location: 'ភាគអាគ្នេយ៍ (South-East Valley)',
+        nearby: 'សាលសមោសរ Gala Dinner Hall, ផ្លូវដើរព្រៃស្រល់ Pine Trail',
+        walkingGuide: 'ដើរពី Reception ចុះទៅទិសខាងត្បូងកាត់សាលប្រជុំ ប្រហែល ២-៣ នាទី (~២២០ ម៉ែត្រ)',
+        coords: { lat: 11.3188, lon: 104.0598 },
+        color: '#8b5cf6',
+        pinCoords: { x: 585, y: 365 },
+        desc: 'តំបន់ធម្មជាតិខ្យល់អាកាសត្រជាក់បរិសុទ្ធ ជិតសាលសមោសរ Gala Dinner'
+      }
+    },
+    landmarks: [
+      {
+        id: 'reception',
+        name: 'ការិយាល័យទទួលភ្ញៀវ (Front Desk & Reception)',
+        category: 'core',
+        icon: '🏢',
+        coords: { lat: 11.3197, lon: 104.0583 },
+        pinCoords: { x: 230, y: 340 },
+        walkingGuide: 'ចំណុចកណ្តាលនៃរីហ្សត (Central Hub)',
+        note: 'ទីតាំង Check-in / Check-out និងទទួលសោបន្ទប់ (Ext: 023 999 888)'
+      },
+      {
+        id: 'restaurant',
+        name: 'ភោជនីយដ្ឋានធំ (Pine View Restaurant)',
+        category: 'dining',
+        icon: '🍽️',
+        coords: { lat: 11.3204, lon: 104.0588 },
+        pinCoords: { x: 370, y: 110 },
+        walkingGuide: 'ដើរពី Reception ទៅខាងកើត ៦០ ម៉ែត្រ (~១ នាទី)',
+        note: 'អាហារប៊ូហ្វេថ្ងៃត្រង់ និងអាហារពេលព្រឹក (ម៉ោង 7:30 AM & 12:00 PM)'
+      },
+      {
+        id: 'pool',
+        name: 'អាងហែលទឹកព្រៃស្រល់ (Pine Swimming Pool)',
+        category: 'recreation',
+        icon: '🏊‍♂️',
+        coords: { lat: 11.3201, lon: 104.0582 },
+        pinCoords: { x: 430, y: 230 },
+        walkingGuide: 'នៅចំកណ្តាលទល់មុខ Zone C (៥០ ម៉ែត្រពី Reception)',
+        note: 'បើកពីម៉ោង 6:00 AM ដល់ 8:00 PM (ទឹកធម្មជាតិត្រជាក់ស្រួល)'
+      },
+      {
+        id: 'gala_hall',
+        name: 'សាលសមោសរ Gala Dinner & ឆាកតន្ត្រី (Gala Hall)',
+        category: 'event',
+        icon: '🎉',
+        coords: { lat: 11.3189, lon: 104.0596 },
+        pinCoords: { x: 360, y: 430 },
+        walkingGuide: 'ដើរទៅទិសខាងត្បូង ក្បែរ Zone D (~២០០ ម៉ែត្រ)',
+        note: 'កម្មវិធីរាត្រីសមោសរ Gala Dinner & Party ម៉ោង 6:30 PM យប់ថ្ងៃសៅរ៍'
+      },
+      {
+        id: 'activity_field',
+        name: 'ទីលានសកម្មភាព & Team Building Lawn',
+        category: 'activity',
+        icon: '⚽',
+        coords: { lat: 11.3212, lon: 104.0576 },
+        pinCoords: { x: 260, y: 50 },
+        walkingGuide: 'នៅខាងជើង Zone A និងខាងលិច Zone B (~១៥០ ម៉ែត្រ)',
+        note: 'ទីតាំងលេងហ្គេម Game Challenge & ប្រជុំជួរម៉ោង 2:00 PM'
+      },
+      {
+        id: 'bus_parking',
+        name: 'ចំណតរថយន្តធំ & Airbus 1-4 Station',
+        category: 'transport',
+        icon: '🚌',
+        coords: { lat: 11.3193, lon: 104.0577 },
+        pinCoords: { x: 90, y: 400 },
+        walkingGuide: 'ច្រកចូលធំខាងឆ្វេងដៃ (~៨០ ម៉ែត្រពី Reception)',
+        note: 'ចំណតឡាន Airbus 1, 2, 3, 4 និង VIP Cars ពេលមកដល់ និងពេលត្រឡប់'
+      },
+      {
+        id: 'hiking_trail',
+        name: 'ច្រកផ្លូវដើរព្រៃស្រល់ (Pine Hiking Trailhead)',
+        category: 'hiking',
+        icon: '🌲',
+        coords: { lat: 11.3223, lon: 104.0605 },
+        pinCoords: { x: 730, y: 65 },
+        walkingGuide: 'នៅខាងលើ Zone B និង Zone D ឆ្ពោះទៅជ្រលងភ្នំ',
+        note: 'ចំណុចចាប់ផ្តើម Fun Hiking Adventure (ចម្ងាយដើរ ៣-៤ គ.ម)'
+      },
+      {
+        id: 'first_aid',
+        name: 'ប៉ុស្តិ៍សង្គ្រោះបឋម (First Aid Medical Post)',
+        category: 'emergency',
+        icon: '🏥',
+        coords: { lat: 11.3198, lon: 104.0586 },
+        pinCoords: { x: 175, y: 270 },
+        walkingGuide: 'បន្ទប់ក្បែរ Reception និង First Aid Teams នៅ D010, B010, C010',
+        note: 'ក្រុមគ្រូពេទ្យ និងថ្នាំសង្គ្រោះបឋម ២៤ ម៉ោង (Call: 012345671)'
+      }
+    ],
+    tips: [
+      { icon: '📶', title: 'WiFi រមណីយដ្ឋាន', desc: 'ឈ្មោះ WiFi: "vKirirom_Guest" (No password) មាននៅ Reception, Restaurant និង Lounge' },
+      { icon: '⚡', title: 'ទឹកក្តៅ & ភ្លើង', desc: 'ប្រព័ន្ធទឹកក្តៅដើរដោយពន្លឺព្រះអាទិត្យ សូមបើកទឹកក្តៅចោលប្រហែល ១ នាទីមុនងូត' },
+      { icon: '🕒', title: 'ម៉ោងចេញ-ចូលបន្ទប់', desc: 'Check-in: 10:30 AM (Day 1) | Check-out: 11:30 AM (Day 2)' },
+      { icon: '🌲', title: 'បរិស្ថានធម្មជាតិ', desc: 'សូមជួយថែរក្សាអនាម័យ មិនបោះសំរាមពាសវាលពាសកាល និងហាមជក់បារីក្នុងព្រៃស្រល់' }
+    ]
+  };
+
+  function getBlueprintImgSrc() {
+    const el = document.querySelector('.mapbox img');
+    if (el && el.src) return el.src;
+    const match = document.body.innerHTML.match(/src="(data:image\/[^;]+;base64,[^"]+)"/);
+    return match ? match[1] : '';
+  }
+
+  function getEffectivePeopleList() {
+    if (typeof getAllPeople === 'function') {
+      try {
+        const list = getAllPeople();
+        if (Array.isArray(list) && list.length) {
+          return list.map(p => (typeof eff === 'function' ? eff(p) : p));
+        }
+      } catch(e) {}
+    }
+    if (typeof PEOPLE !== 'undefined' && Array.isArray(PEOPLE)) {
+      return PEOPLE.map(p => (typeof eff === 'function' ? eff(p) : p));
+    }
+    return [];
+  }
+
+  function getZoneDetails(zoneKey) {
+    const list = getEffectivePeopleList();
+    const zoneStaff = list.filter(p => (p.room || '').trim().startsWith(zoneKey));
+    const rooms = [...new Set(zoneStaff.map(p => (p.room || '').trim()).filter(Boolean))].sort();
+    const maleCount = zoneStaff.filter(p => p.gender === 'M').length;
+    const femaleCount = zoneStaff.filter(p => p.gender === 'F').length;
+    return {
+      zoneKey,
+      meta: RESORT_DATA.zones[zoneKey] || {},
+      totalStaff: zoneStaff.length,
+      maleCount,
+      femaleCount,
+      rooms,
+      staff: zoneStaff
+    };
+  }
+
+  function getRoomOccupants(roomNo) {
+    if (!roomNo) return null;
+    const cleanR = roomNo.trim().toUpperCase();
+    const list = getEffectivePeopleList();
+    const occupants = list.filter(p => (p.room || '').trim().toUpperCase() === cleanR);
+    const zKey = cleanR.charAt(0);
+    const zoneMeta = RESORT_DATA.zones[zKey] || {};
+    return {
+      roomNo: cleanR,
+      zoneKey: zKey,
+      zoneMeta,
+      occupants
+    };
+  }
+
+  function calculateKiriromDistance(userLat, userLon) {
+    const KIRIROM_LAT = RESORT_DATA.coords.lat;
+    const KIRIROM_LON = RESORT_DATA.coords.lon;
+    const R = 6371; // Earth radius in km
+    const dLat = (KIRIROM_LAT - userLat) * Math.PI / 180;
+    const dLon = (KIRIROM_LON - userLon) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(userLat * Math.PI / 180) * Math.cos(KIRIROM_LAT * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c * 10) / 10;
+  }
+
+  function generateResortSvg(activePinCoords) {
+    const px = activePinCoords && typeof activePinCoords.x === 'number' ? activePinCoords.x : 230;
+    const py = activePinCoords && typeof activePinCoords.y === 'number' ? activePinCoords.y : 340;
+
+    return `
+      <svg viewBox="0 0 820 520" class="ext-resort-svg" id="ext-resort-svg" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="forestGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#144d34" stop-opacity="0.3"/>
+            <stop offset="100%" stop-color="#0a261a" stop-opacity="0"/>
+          </radialGradient>
+          <pattern id="pinePattern" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M20 5 L28 20 L24 20 L30 30 L10 30 L16 20 L12 20 Z" fill="rgba(255,255,255,0.03)" />
+          </pattern>
+          <filter id="pinShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/>
+          </filter>
+        </defs>
+
+        <!-- Background Canvas -->
+        <rect width="820" height="520" rx="16" fill="#0d261b" stroke="var(--line)" stroke-width="1.5" />
+        <rect width="820" height="520" rx="16" fill="url(#pinePattern)" />
+
+        <!-- Contour lines / Nature paths -->
+        <path d="M 0 160 Q 200 130 420 180 T 820 140" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.5" stroke-dasharray="4,4" />
+        <path d="M 0 380 Q 250 420 480 370 T 820 400" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1.5" stroke-dasharray="4,4" />
+
+        <!-- Roads & Walkways Network -->
+        <!-- Main Entrance Road from Bus Parking -->
+        <path d="M 100 420 L 100 370 Q 110 340 180 340 L 230 340" fill="none" stroke="#4a6358" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M 100 420 L 100 370 Q 110 340 180 340 L 230 340" fill="none" stroke="#fef3c7" stroke-width="2" stroke-dasharray="6,6" stroke-linecap="round" />
+
+        <!-- Core Promenade Loop Connecting All Zones -->
+        <path d="M 230 340 Q 140 320 140 230 L 140 200 Q 140 120 230 110 L 370 110 Q 420 110 450 150 L 580 150 Q 610 150 610 210 L 610 290 Q 610 340 560 360 L 460 360 Q 380 360 360 410 L 360 420 Q 340 440 280 410 Q 240 390 230 340" 
+              fill="none" stroke="#385145" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M 230 340 Q 140 320 140 230 L 140 200 Q 140 120 230 110 L 370 110 Q 420 110 450 150 L 580 150 Q 610 150 610 210 L 610 290 Q 610 340 560 360 L 460 360 Q 380 360 360 410 L 360 420 Q 340 440 280 410 Q 240 390 230 340" 
+              fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-dasharray="3,3" />
+
+        <!-- Cross Pathways to Central Amenities -->
+        <path d="M 230 340 L 320 260 L 410 240" fill="none" stroke="#385145" stroke-width="6" stroke-linecap="round" />
+        <path d="M 370 110 L 370 180 L 410 230" fill="none" stroke="#385145" stroke-width="6" stroke-linecap="round" />
+        <path d="M 410 240 L 500 330" fill="none" stroke="#385145" stroke-width="6" stroke-linecap="round" />
+
+        <!-- Hiking Trailhead path extending out -->
+        <path d="M 610 150 Q 670 130 730 65" fill="none" stroke="#d97706" stroke-width="5" stroke-dasharray="6,4" stroke-linecap="round" />
+
+        <!-- ================= ZONE POLYGONS ================= -->
+        <!-- ZONE A (North-West) -->
+        <g class="svg-zone-grp" data-zone="A" id="svg-zone-A" style="cursor:pointer;">
+          <rect x="50" y="90" width="170" height="130" rx="14" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="2.5" class="svg-zone-rect" />
+          <rect x="62" y="102" width="70" height="22" rx="6" fill="#10b981" />
+          <text x="97" y="117" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">Zone A</text>
+          <text x="62" y="145" fill="#e2ece5" font-size="13" font-weight="bold">Pine Villa A</text>
+          <text x="62" y="165" fill="#a7f3d0" font-size="11">A001 – A016 (16 បន្ទប់)</text>
+          <text x="62" y="185" fill="#6ee7b7" font-size="11">👥 33 នាក់ (ប្រុស 27 • ស្រី 6)</text>
+          <circle cx="195" cy="115" r="14" fill="rgba(16, 185, 129, 0.25)" />
+          <text x="195" y="120" font-size="14" text-anchor="middle">🏡</text>
+        </g>
+
+        <!-- ZONE B (North-East) -->
+        <g class="svg-zone-grp" data-zone="B" id="svg-zone-B" style="cursor:pointer;">
+          <rect x="510" y="60" width="185" height="130" rx="14" fill="rgba(59, 130, 246, 0.15)" stroke="#3b82f6" stroke-width="2.5" class="svg-zone-rect" />
+          <rect x="522" y="72" width="70" height="22" rx="6" fill="#3b82f6" />
+          <text x="557" y="87" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">Zone B</text>
+          <text x="522" y="115" fill="#e2ece5" font-size="13" font-weight="bold">Pine Villa B</text>
+          <text x="522" y="135" fill="#bfdbfe" font-size="11">B001 – B016 (16 បន្ទប់)</text>
+          <text x="522" y="155" fill="#93c5fd" font-size="11">👥 44 នាក់ (ប្រុស 44)</text>
+          <circle cx="665" cy="85" r="14" fill="rgba(59, 130, 246, 0.25)" />
+          <text x="665" y="90" font-size="14" text-anchor="middle">🏡</text>
+        </g>
+
+        <!-- ZONE C (Center Core) -->
+        <g class="svg-zone-grp" data-zone="C" id="svg-zone-C" style="cursor:pointer;">
+          <rect x="245" y="195" width="150" height="105" rx="14" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-width="2.5" class="svg-zone-rect" />
+          <rect x="255" y="205" width="70" height="22" rx="6" fill="#f59e0b" />
+          <text x="290" y="220" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">Zone C</text>
+          <text x="255" y="246" fill="#e2ece5" font-size="12" font-weight="bold">Deluxe Villa C</text>
+          <text x="255" y="264" fill="#fde68a" font-size="10.5">C001 – C012 (12 បន្ទប់)</text>
+          <text x="255" y="282" fill="#fcd34d" font-size="10.5">👥 29 នាក់ (ប្រុស 12 • ស្រី 17)</text>
+          <circle cx="370" cy="216" r="13" fill="rgba(245, 158, 11, 0.25)" />
+          <text x="370" y="221" font-size="13" text-anchor="middle">🏡</text>
+        </g>
+
+        <!-- ZONE D (South-East Valley) -->
+        <g class="svg-zone-grp" data-zone="D" id="svg-zone-D" style="cursor:pointer;">
+          <rect x="490" y="300" width="195" height="135" rx="14" fill="rgba(139, 92, 246, 0.15)" stroke="#8b5cf6" stroke-width="2.5" class="svg-zone-rect" />
+          <rect x="502" y="312" width="70" height="22" rx="6" fill="#8b5cf6" />
+          <text x="537" y="327" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle">Zone D</text>
+          <text x="502" y="355" fill="#e2ece5" font-size="13" font-weight="bold">Luxury Tent & Villa D</text>
+          <text x="502" y="375" fill="#ddd6fe" font-size="11">D001 – D018 (18 បន្ទប់)</text>
+          <text x="502" y="395" fill="#c4b5fd" font-size="11">👥 51 នាក់ (ប្រុស 15 • ស្រី 36)</text>
+          <circle cx="655" cy="325" r="14" fill="rgba(139, 92, 246, 0.25)" />
+          <text x="655" y="330" font-size="14" text-anchor="middle">⛺</text>
+        </g>
+
+        <!-- ================= LANDMARKS ================= -->
+        <!-- Reception / Lobby -->
+        <g class="svg-lm-grp" data-lm="reception" id="svg-lm-reception" style="cursor:pointer;">
+          <circle cx="230" cy="340" r="22" fill="#0f766e" stroke="#2dd4bf" stroke-width="2.5" filter="url(#pinShadow)" />
+          <text x="230" y="347" font-size="17" text-anchor="middle">🏢</text>
+          <rect x="180" y="370" width="100" height="20" rx="5" fill="rgba(15, 118, 110, 0.9)" />
+          <text x="230" y="384" fill="#fff" font-size="10.5" font-weight="bold" text-anchor="middle">Reception / សោ</text>
+        </g>
+
+        <!-- Pine View Restaurant -->
+        <g class="svg-lm-grp" data-lm="restaurant" id="svg-lm-restaurant" style="cursor:pointer;">
+          <circle cx="370" cy="110" r="22" fill="#c2410c" stroke="#fb923c" stroke-width="2.5" filter="url(#pinShadow)" />
+          <text x="370" y="117" font-size="17" text-anchor="middle">🍽️</text>
+          <rect x="320" y="138" width="100" height="20" rx="5" fill="rgba(194, 65, 12, 0.9)" />
+          <text x="370" y="152" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">ភោជនីយដ្ឋានធំ</text>
+        </g>
+
+        <!-- Swimming Pool -->
+        <g class="svg-lm-grp" data-lm="pool" id="svg-lm-pool" style="cursor:pointer;">
+          <circle cx="430" cy="230" r="22" fill="#0284c7" stroke="#38bdf8" stroke-width="2.5" filter="url(#pinShadow)" />
+          <text x="430" y="237" font-size="17" text-anchor="middle">🏊‍♂️</text>
+          <rect x="385" y="258" width="90" height="20" rx="5" fill="rgba(2, 132, 199, 0.9)" />
+          <text x="430" y="272" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">អាងហែលទឹក</text>
+        </g>
+
+        <!-- Gala Dinner Hall -->
+        <g class="svg-lm-grp" data-lm="gala_hall" id="svg-lm-gala_hall" style="cursor:pointer;">
+          <circle cx="360" cy="430" r="22" fill="#7c3aed" stroke="#a78bfa" stroke-width="2.5" filter="url(#pinShadow)" />
+          <text x="360" y="437" font-size="17" text-anchor="middle">🎉</text>
+          <rect x="305" y="458" width="110" height="20" rx="5" fill="rgba(124, 58, 237, 0.9)" />
+          <text x="360" y="472" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">សាល Gala Dinner</text>
+        </g>
+
+        <!-- Activity Lawn -->
+        <g class="svg-lm-grp" data-lm="activity_field" id="svg-lm-activity_field" style="cursor:pointer;">
+          <circle cx="260" cy="50" r="20" fill="#15803d" stroke="#4ade80" stroke-width="2" filter="url(#pinShadow)" />
+          <text x="260" y="56" font-size="15" text-anchor="middle">⚽</text>
+          <rect x="205" y="74" width="110" height="18" rx="5" fill="rgba(21, 128, 61, 0.9)" />
+          <text x="260" y="87" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">ទីលានលេងហ្គេម</text>
+        </g>
+
+        <!-- Airbus Parking Station -->
+        <g class="svg-lm-grp" data-lm="bus_parking" id="svg-lm-bus_parking" style="cursor:pointer;">
+          <circle cx="90" cy="400" r="22" fill="#b45309" stroke="#fbbf24" stroke-width="2.5" filter="url(#pinShadow)" />
+          <text x="90" y="407" font-size="17" text-anchor="middle">🚌</text>
+          <rect x="35" y="428" width="110" height="20" rx="5" fill="rgba(180, 83, 9, 0.9)" />
+          <text x="90" y="442" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">ចំណត Airbus 1-4</text>
+        </g>
+
+        <!-- Pine Hiking Trailhead -->
+        <g class="svg-lm-grp" data-lm="hiking_trail" id="svg-lm-hiking_trail" style="cursor:pointer;">
+          <circle cx="730" cy="65" r="20" fill="#166534" stroke="#86efac" stroke-width="2" filter="url(#pinShadow)" />
+          <text x="730" y="71" font-size="15" text-anchor="middle">🌲</text>
+          <rect x="670" y="90" width="120" height="20" rx="5" fill="rgba(22, 101, 52, 0.9)" />
+          <text x="730" y="104" fill="#fff" font-size="10" font-weight="bold" text-anchor="middle">ផ្លូវដើរព្រៃ Hiking</text>
+        </g>
+
+        <!-- First Aid Post -->
+        <g class="svg-lm-grp" data-lm="first_aid" id="svg-lm-first_aid" style="cursor:pointer;">
+          <circle cx="175" cy="270" r="18" fill="#be123c" stroke="#fda4af" stroke-width="2" filter="url(#pinShadow)" />
+          <text x="175" y="276" font-size="14" text-anchor="middle">🏥</text>
+          <rect x="130" y="293" width="90" height="18" rx="4" fill="rgba(190, 18, 60, 0.9)" />
+          <text x="175" y="306" fill="#fff" font-size="9.5" font-weight="bold" text-anchor="middle">សង្គ្រោះបឋម</text>
+        </g>
+
+        <!-- Active Pin Indicator that moves on selection -->
+        <g id="ext-svg-pin" transform="translate(${px}, ${py})" style="transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: none;">
+          <circle cx="0" cy="0" r="26" fill="rgba(239, 68, 68, 0.3)" class="ext-radar-pulse" />
+          <path d="M 0 -36 C -12 -36 -18 -26 -18 -16 C -18 -4 0 0 0 0 C 0 0 18 -4 18 -16 C 18 -26 12 -36 0 -36 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2.5" filter="url(#pinShadow)" />
+          <circle cx="0" cy="-20" r="6" fill="#ffffff" />
+        </g>
+
+        <!-- North Compass Rose -->
+        <g transform="translate(770, 470)">
+          <circle cx="0" cy="0" r="18" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" />
+          <polygon points="0,-14 4,-2 -4,-2" fill="#ef4444" />
+          <polygon points="0,14 4,2 -4,2" fill="#e5e7eb" />
+          <text x="0" y="-17" fill="#ef4444" font-size="9" font-weight="bold" text-anchor="middle">N</text>
+        </g>
+      </svg>
+    `;
+  }
+
+  function showResortMapModal(initialTarget) {
+    let currentTab = 'map'; // 'map' | 'blueprint' | 'rooms' | 'landmarks' | 'tips'
+    let currentZone = 'C';
+    let currentRoom = null;
+    let currentLandmark = null;
+
+    const meUser = getMe();
+    if (initialTarget) {
+      const t = String(initialTarget).trim().toUpperCase();
+      if (/^[ABCD]\d{3}$/.test(t)) {
+        currentRoom = t;
+        currentZone = t.charAt(0);
+      } else if (['A', 'B', 'C', 'D'].includes(t)) {
+        currentZone = t;
+      } else if (RESORT_DATA.landmarks.some(l => l.id === initialTarget)) {
+        currentLandmark = initialTarget;
+      }
+    } else if (meUser && meUser.room && /^[ABCD]\d{3}$/.test(meUser.room.trim().toUpperCase())) {
+      currentRoom = meUser.room.trim().toUpperCase();
+      currentZone = currentRoom.charAt(0);
+    }
+
+    const modalHtml = `
+      <div class="ext-map-modal-wrap" id="ext-map-modal-container">
+        <!-- Top Tab Bar -->
+        <div class="ext-map-header-tabs" id="ext-map-tabs-bar">
+          <button class="ext-map-tab-btn active" data-tab="map">🗺️ ផែនទីអន្តរកម្ម</button>
+          <button class="ext-map-tab-btn" data-tab="blueprint">🖼️ ប្លង់ដើម</button>
+          <button class="ext-map-tab-btn" data-tab="rooms">🏡 បន្ទប់ស្នាក់នៅ</button>
+          <button class="ext-map-tab-btn" data-tab="landmarks">📍 ទីតាំងសំខាន់ & GPS</button>
+          <button class="ext-map-tab-btn" data-tab="tips">💡 ព័ត៌មានជំនួយ</button>
+        </div>
+
+        <div id="ext-map-view-body">
+          <!-- Dynamic Content rendered by renderActiveView() -->
+        </div>
+      </div>
+    `;
+
+    openModal('🗺️ ផែនទីរមណីយដ្ឋាន & បន្ទប់ស្នាក់នៅ (vKirirom)', modalHtml, true);
+
+    function getPinCoords() {
+      if (currentLandmark) {
+        const lm = RESORT_DATA.landmarks.find(l => l.id === currentLandmark);
+        if (lm && lm.pinCoords) return lm.pinCoords;
+      }
+      const zMeta = RESORT_DATA.zones[currentZone];
+      return zMeta && zMeta.pinCoords ? zMeta.pinCoords : { x: 230, y: 340 };
+    }
+
+    function renderActiveView() {
+      const container = document.getElementById('ext-map-view-body');
+      if (!container) return;
+
+      // Update tabs active state
+      document.querySelectorAll('#ext-map-tabs-bar .ext-map-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === currentTab);
+      });
+
+      if (currentTab === 'map') {
+        renderInteractiveMapView(container);
+      } else if (currentTab === 'blueprint') {
+        renderBlueprintView(container);
+      } else if (currentTab === 'rooms') {
+        renderRoomsView(container);
+      } else if (currentTab === 'landmarks') {
+        renderLandmarksView(container);
+      } else if (currentTab === 'tips') {
+        renderTipsView(container);
+      }
+    }
+
+    function renderInteractiveMapView(container) {
+      const pin = getPinCoords();
+      const zData = getZoneDetails(currentZone);
+      const roomData = currentRoom ? getRoomOccupants(currentRoom) : null;
+      const lmData = currentLandmark ? RESORT_DATA.landmarks.find(l => l.id === currentLandmark) : null;
+
+      container.innerHTML = `
+        <!-- Search bar with suggestions -->
+        <div class="ext-map-search-bar">
+          <span class="ext-map-search-icon">🔍</span>
+          <input type="text" class="ext-map-search-input" id="ext-resort-search" placeholder="វាយលេខបន្ទប់ (A007, B010, C002...) ឬឈ្មោះបុគ្គលិក..." value="${currentRoom || ''}" autocomplete="off">
+          <div class="ext-map-search-dropdown" id="ext-resort-search-drop"></div>
+        </div>
+
+        <!-- Quick Action Chips -->
+        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;scrollbar-width:none;">
+          ${meUser && meUser.room ? `
+            <button class="btn sm" id="ext-quick-my-room" style="font-size:11px;padding:4px 9px;background:var(--pine);color:#fff;border-radius:999px;white-space:nowrap;">
+              🏠 បន្ទប់របស់ខ្ញុំ (${esc(meUser.room)})
+            </button>
+          ` : ''}
+          <button class="btn sm ${currentZone==='A'&&!currentLandmark?'active':''}" data-set-zone="A" style="font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;">Zone A (16)</button>
+          <button class="btn sm ${currentZone==='B'&&!currentLandmark?'active':''}" data-set-zone="B" style="font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;">Zone B (16)</button>
+          <button class="btn sm ${currentZone==='C'&&!currentLandmark?'active':''}" data-set-zone="C" style="font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;">Zone C (12)</button>
+          <button class="btn sm ${currentZone==='D'&&!currentLandmark?'active':''}" data-set-zone="D" style="font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;">Zone D (18)</button>
+          <button class="btn sm ${currentLandmark==='reception'?'active':''}" data-set-lm="reception" style="font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;">🏢 Reception</button>
+          <button class="btn sm ${currentLandmark==='pool'?'active':''}" data-set-lm="pool" style="font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;">🏊 Pool</button>
+        </div>
+
+        <!-- SVG Map Card -->
+        <div class="ext-map-canvas-card">
+          ${generateResortSvg(pin)}
+        </div>
+
+        <!-- Details Info Card -->
+        <div class="ext-map-info-card">
+          ${lmData ? `
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+              <div>
+                <div style="font-size:16px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;">
+                  <span>${lmData.icon}</span> <span>${esc(lmData.name)}</span>
+                </div>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+                  📍 ${esc(lmData.walkingGuide)}
+                </div>
+                <div style="font-size:12px;color:var(--pine);font-weight:500;margin-top:2px;">
+                  ℹ️ ${esc(lmData.note)}
+                </div>
+              </div>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${lmData.coords.lat},${lmData.coords.lon}" target="_blank" rel="noopener" class="btn sm" style="background:#1d5a43;color:#fff;border-radius:10px;text-decoration:none;white-space:nowrap;font-size:11.5px;padding:6px 10px;">
+                🧭 Google Maps
+              </a>
+            </div>
+          ` : `
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+              <div>
+                <div style="font-size:15px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;">
+                  <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${zData.meta.color || 'var(--pine)'};"></span>
+                  <span>${esc(zData.meta.khmerName || 'Zone ' + currentZone)}</span>
+                </div>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px;">
+                  📍 ${esc(zData.meta.walkingGuide || '')}
+                </div>
+                <div style="font-size:12px;color:var(--pine);margin-top:2px;font-weight:600;">
+                  👥 ${zData.totalStaff} នាក់ (ប្រុស ${zData.maleCount} • ស្រី ${zData.femaleCount}) • ${zData.rooms.length} បន្ទប់
+                </div>
+              </div>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${zData.meta.coords.lat},${zData.meta.coords.lon}" target="_blank" rel="noopener" class="btn sm" style="background:#1d5a43;color:#fff;border-radius:10px;text-decoration:none;white-space:nowrap;font-size:11.5px;padding:6px 10px;">
+                🧭 នាំផ្លូវ GPS
+              </a>
+            </div>
+
+            <!-- If Room selected, show room occupants -->
+            ${roomData && roomData.occupants.length ? `
+              <div style="margin-top:12px;padding:10px;border-radius:10px;background:color-mix(in srgb, var(--surface) 80%, var(--line));border:1px solid var(--line);">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-weight:700;font-size:13px;color:var(--ink);">
+                    🚪 បន្ទប់ ${esc(roomData.roomNo)} (${roomData.occupants.length} នាក់)
+                  </span>
+                  <button class="btn sm" id="ext-filter-app-room" style="font-size:10.5px;padding:2px 7px;border-radius:6px;">
+                    🔍 បង្ហាញក្នុង App
+                  </button>
+                </div>
+                <div style="display:grid;gap:4px;">
+                  ${roomData.occupants.map(p => `
+                    <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;background:var(--surface);padding:4px 8px;border-radius:6px;">
+                      <span style="font-weight:600;">${p.gender === 'F' ? '👩' : '👨'} ${esc(p.name)}</span>
+                      <span style="color:var(--muted);font-size:11px;">
+                        ${esc(p.company)} • ID ${esc(p.sid)} ${p.label ? '• ' + esc(p.label) : ''}
+                      </span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Quick Room Buttons in this zone -->
+            <div style="margin-top:10px;">
+              <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:4px;">
+                ជ្រើសរើសបន្ទប់ក្នុង ${esc(zData.meta.name || 'Zone ' + currentZone)}:
+              </div>
+              <div class="ext-zone-room-grid">
+                ${zData.rooms.map(r => `
+                  <button class="ext-room-chip-btn ${currentRoom === r ? 'active' : ''}" data-room-pick="${r}">
+                    <span>${r}</span>
+                    <small style="font-size:9px;opacity:0.8;">
+                      ${getRoomOccupants(r)?.occupants.length || 0} នាក់
+                    </small>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          `}
+        </div>
+      `;
+
+      // Attach Search Events
+      const searchIn = document.getElementById('ext-resort-search');
+      const dropEl = document.getElementById('ext-resort-search-drop');
+      if (searchIn && dropEl) {
+        searchIn.oninput = () => {
+          const q = searchIn.value.trim().toLowerCase();
+          if (!q) {
+            dropEl.style.display = 'none';
+            return;
+          }
+          const list = getEffectivePeopleList();
+          const matchedPeople = list.filter(p => 
+            p.name.toLowerCase().includes(q) || 
+            (p.sid && String(p.sid).toLowerCase().includes(q)) || 
+            (p.room && p.room.toLowerCase().includes(q))
+          ).slice(0, 8);
+
+          if (!matchedPeople.length) {
+            dropEl.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:12px;text-align:center;">រកមិនឃើញបន្ទប់ ឬឈ្មោះនេះទេ</div>';
+            dropEl.style.display = 'block';
+            return;
+          }
+
+          dropEl.innerHTML = matchedPeople.map(p => `
+            <div class="ext-map-search-item" data-select-room="${esc(p.room || '')}">
+              <div>
+                <b>${esc(p.name)}</b> <span style="font-size:11px;color:var(--muted);">(ID: ${esc(p.sid)})</span>
+              </div>
+              <span class="pchip" style="font-size:11px;font-weight:700;color:var(--pine);">
+                🚪 ${esc(p.room || 'គ្មានបន្ទប់')}
+              </span>
+            </div>
+          `).join('');
+          dropEl.style.display = 'block';
+
+          dropEl.querySelectorAll('[data-select-room]').forEach(el => {
+            el.onclick = () => {
+              const r = el.dataset.selectRoom;
+              if (r) {
+                currentRoom = r.trim().toUpperCase();
+                currentZone = currentRoom.charAt(0);
+                currentLandmark = null;
+                dropEl.style.display = 'none';
+                renderActiveView();
+              }
+            };
+          });
+        };
+      }
+
+      // Quick my room button
+      const myRoomBtn = document.getElementById('ext-quick-my-room');
+      if (myRoomBtn && meUser && meUser.room) {
+        myRoomBtn.onclick = () => {
+          currentRoom = meUser.room.trim().toUpperCase();
+          currentZone = currentRoom.charAt(0);
+          currentLandmark = null;
+          renderActiveView();
+        };
+      }
+
+      // Quick filter in main app
+      const filterAppRoomBtn = document.getElementById('ext-filter-app-room');
+      if (filterAppRoomBtn && roomData) {
+        filterAppRoomBtn.onclick = () => {
+          if (typeof f !== 'undefined') {
+            f.room = roomData.roomNo;
+            f.tab = 'rooms';
+            if (typeof window.render === 'function') window.render();
+          }
+          closeModal();
+          if (typeof window.toast === 'function') {
+            window.toast(`🔍 បានច្រោះមើលបន្ទប់ ${roomData.roomNo}`);
+          }
+        };
+      }
+
+      // SVG Click handlers
+      document.querySelectorAll('#ext-resort-svg .svg-zone-grp').forEach(grp => {
+        grp.onclick = () => {
+          const z = grp.dataset.zone;
+          if (z) {
+            currentZone = z;
+            currentLandmark = null;
+            renderActiveView();
+          }
+        };
+      });
+
+      document.querySelectorAll('#ext-resort-svg .svg-lm-grp').forEach(grp => {
+        grp.onclick = () => {
+          const lm = grp.dataset.lm;
+          if (lm) {
+            currentLandmark = lm;
+            renderActiveView();
+          }
+        };
+      });
+
+      // Zone bar buttons
+      container.querySelectorAll('[data-set-zone]').forEach(btn => {
+        btn.onclick = () => {
+          currentZone = btn.dataset.setZone;
+          currentLandmark = null;
+          renderActiveView();
+        };
+      });
+
+      // Landmark buttons
+      container.querySelectorAll('[data-set-lm]').forEach(btn => {
+        btn.onclick = () => {
+          currentLandmark = btn.dataset.setLm;
+          renderActiveView();
+        };
+      });
+
+      // Room pick buttons
+      container.querySelectorAll('[data-room-pick]').forEach(btn => {
+        btn.onclick = () => {
+          currentRoom = btn.dataset.roomPick;
+          currentLandmark = null;
+          renderActiveView();
+        };
+      });
+    }
+
+    function renderBlueprintView(container) {
+      const blueprintSrc = getBlueprintImgSrc();
+      container.innerHTML = `
+        <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">
+          <span>🔍 ចុចលើប្លង់ដើម្បីពង្រីក (Tap to Zoom)</span>
+          <span style="font-size:11.5px;color:var(--pine);">vKirirom Official Master Plan</span>
+        </div>
+        <div class="ext-blueprint-img-box" id="ext-blueprint-box">
+          ${blueprintSrc ? `
+            <img src="${blueprintSrc}" alt="Resort Blueprint" id="ext-blueprint-img">
+          ` : `
+            <div style="padding:40px;color:var(--muted);font-size:13px;">
+              🖼️ ប្លង់ដើមកំពុងផ្ទុក... សូមពិនិត្យនៅក្នុងផ្ទាំង Rooms
+            </div>
+          `}
+        </div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:repeat(2, 1fr);gap:8px;">
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:11.5px;">
+            <b>Zone A & B:</b> Pine Villa Suites
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:11.5px;">
+            <b>Zone C & D:</b> Deluxe Villa & Luxury Tents
+          </div>
+        </div>
+      `;
+
+      const box = document.getElementById('ext-blueprint-box');
+      if (box) {
+        box.onclick = () => box.classList.toggle('zoom');
+      }
+    }
+
+    function renderRoomsView(container) {
+      let filterZone = 'ALL';
+      const renderZoneRooms = () => {
+        const list = getEffectivePeopleList();
+        const zonesToDisplay = filterZone === 'ALL' ? ['A', 'B', 'C', 'D'] : [filterZone];
+
+        container.innerHTML = `
+          <!-- Zone Filter Tabs -->
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;scrollbar-width:none;">
+            <button class="btn sm ${filterZone==='ALL'?'active':''}" data-rz="ALL" style="font-size:11.5px;padding:5px 12px;border-radius:999px;">
+              ទាំងអស់ (62 បន្ទប់)
+            </button>
+            <button class="btn sm ${filterZone==='A'?'active':''}" data-rz="A" style="font-size:11.5px;padding:5px 12px;border-radius:999px;">
+              Zone A (16)
+            </button>
+            <button class="btn sm ${filterZone==='B'?'active':''}" data-rz="B" style="font-size:11.5px;padding:5px 12px;border-radius:999px;">
+              Zone B (16)
+            </button>
+            <button class="btn sm ${filterZone==='C'?'active':''}" data-rz="C" style="font-size:11.5px;padding:5px 12px;border-radius:999px;">
+              Zone C (12)
+            </button>
+            <button class="btn sm ${filterZone==='D'?'active':''}" data-rz="D" style="font-size:11.5px;padding:5px 12px;border-radius:999px;">
+              Zone D (18)
+            </button>
+          </div>
+
+          <div style="display:grid;gap:12px;max-height:60vh;overflow-y:auto;padding-right:4px;">
+            ${zonesToDisplay.map(zKey => {
+              const zMeta = RESORT_DATA.zones[zKey] || {};
+              const zData = getZoneDetails(zKey);
+              return `
+                <div style="background:var(--surface);border:1.5px solid var(--line);border-radius:14px;padding:12px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--line);">
+                    <div>
+                      <span style="font-weight:700;font-size:14px;color:var(--ink);">
+                        🏡 ${esc(zMeta.khmerName || 'Zone ' + zKey)}
+                      </span>
+                      <div style="font-size:11px;color:var(--muted);margin-top:2px;">
+                        ${esc(zMeta.location || '')} • ដើរពី Reception ~1-2 នាទី
+                      </div>
+                    </div>
+                    <span style="font-size:11.5px;font-weight:700;color:var(--pine);background:color-mix(in srgb, var(--pine) 10%, transparent);padding:3px 8px;border-radius:999px;">
+                      ${zData.totalStaff} នាក់
+                    </span>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:8px;">
+                    ${zData.rooms.map(rNo => {
+                      const occ = list.filter(p => (p.room || '').trim() === rNo);
+                      return `
+                        <div style="background:color-mix(in srgb, var(--surface) 95%, var(--line));border:1px solid var(--line);border-radius:10px;padding:8px 10px;">
+                          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                            <b style="font-size:13px;color:var(--ink);">🚪 ${rNo}</b>
+                            <button class="ext-room-map-link" data-goto-map-room="${rNo}">
+                              🗺️ ទីតាំង
+                            </button>
+                          </div>
+                          <div style="display:grid;gap:3px;">
+                            ${occ.map(p => `
+                              <div style="font-size:11.5px;display:flex;align-items:center;justify-content:space-between;">
+                                <span>${p.gender === 'F' ? '👩' : '👨'} ${esc(p.name)}</span>
+                                <span style="color:var(--muted);font-size:10.5px;">${esc(p.company)}</span>
+                              </div>
+                            `).join('')}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+
+        container.querySelectorAll('[data-rz]').forEach(btn => {
+          btn.onclick = () => {
+            filterZone = btn.dataset.rz;
+            renderZoneRooms();
+          };
+        });
+
+        container.querySelectorAll('[data-goto-map-room]').forEach(btn => {
+          btn.onclick = () => {
+            currentRoom = btn.dataset.gotoMapRoom;
+            currentZone = currentRoom.charAt(0);
+            currentLandmark = null;
+            currentTab = 'map';
+            renderActiveView();
+          };
+        });
+      };
+
+      renderZoneRooms();
+    }
+
+    function renderLandmarksView(container) {
+      container.innerHTML = `
+        <!-- Live GPS distance checker -->
+        <div class="ext-gps-calc-hero">
+          <div>
+            <div style="font-size:14px;font-weight:700;">📡 ពិនិត្យចម្ងាយពីអ្នកទៅគិរីរម្យ</div>
+            <div style="font-size:11.5px;opacity:0.85;margin-top:2px;" id="ext-gps-dist-text">
+              ចុចប៊ូតុងខាងស្តាំដើម្បីគណនាចម្ងាយជាក់ស្តែងតាម GPS
+            </div>
+          </div>
+          <button class="btn sm" id="ext-calc-gps-btn" style="background:#fff;color:#064e3b;font-weight:700;border-radius:10px;font-size:11.5px;padding:6px 12px;white-space:nowrap;">
+            📍 ចម្ងាយពីខ្ញុំ
+          </button>
+        </div>
+
+        <!-- Landmarks List -->
+        <div style="max-height:60vh;overflow-y:auto;padding-right:4px;">
+          ${RESORT_DATA.landmarks.map(lm => `
+            <div class="ext-landmark-item">
+              <div style="display:flex;align-items:flex-start;gap:10px;">
+                <div style="font-size:24px;line-height:1;margin-top:2px;">${lm.icon}</div>
+                <div>
+                  <div style="font-size:13.5px;font-weight:700;color:var(--ink);">
+                    ${esc(lm.name)}
+                  </div>
+                  <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">
+                    🚶 ${esc(lm.walkingGuide)}
+                  </div>
+                  <div style="font-size:11.5px;color:var(--pine);font-weight:500;margin-top:1px;">
+                    ℹ️ ${esc(lm.note)}
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${lm.coords.lat},${lm.coords.lon}" target="_blank" rel="noopener" class="btn sm" style="background:#1d5a43;color:#fff;border-radius:8px;text-decoration:none;font-size:11px;padding:5px 9px;text-align:center;">
+                  🧭 នាំផ្លូវ GPS
+                </a>
+                <button class="btn sm" data-view-on-svg="${lm.id}" style="font-size:11px;padding:4px 8px;border-radius:8px;">
+                  🗺️ លើផែនទី
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // GPS calculation event
+      const calcBtn = document.getElementById('ext-calc-gps-btn');
+      const distTxt = document.getElementById('ext-gps-dist-text');
+      if (calcBtn && distTxt) {
+        calcBtn.onclick = () => {
+          if (!navigator.geolocation) {
+            alert('ឧបករណ៍របស់អ្នកមិនគាំទ្រ Geolocation ទេ');
+            return;
+          }
+          calcBtn.disabled = true;
+          distTxt.textContent = '⏳ កំពុងចាប់សញ្ញា GPS...';
+
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              calcBtn.disabled = false;
+              const d = calculateKiriromDistance(pos.coords.latitude, pos.coords.longitude);
+              if (d > 20) {
+                distTxt.innerHTML = `📍 អ្នកនៅចម្ងាយប្រហែល <b>${d} គ.ម</b> ពីគិរីរម្យ (ធ្វើដំណើរប្រហែល ${Math.round(d/50*10)/10} ម៉ោង)`;
+              } else {
+                distTxt.innerHTML = `🌲 អ្នកកំពុងនៅលើតំបន់ភ្នំគិរីរម្យ! ចម្ងាយប្រហែល <b>${d} គ.ម</b> ពីរមណីយដ្ឋាន`;
+              }
+            },
+            (err) => {
+              calcBtn.disabled = false;
+              distTxt.textContent = '⚠️ មិនអាចចាប់សញ្ញា GPS បានទេ (សូមបើក Location Access)';
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        };
+      }
+
+      container.querySelectorAll('[data-view-on-svg]').forEach(btn => {
+        btn.onclick = () => {
+          currentLandmark = btn.dataset.viewOnSvg;
+          currentTab = 'map';
+          renderActiveView();
+        };
+      });
+    }
+
+    function renderTipsView(container) {
+      container.innerHTML = `
+        <div style="display:grid;gap:10px;">
+          ${RESORT_DATA.tips.map(tip => `
+            <div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;align-items:flex-start;gap:12px;">
+              <span style="font-size:22px;line-height:1;">${tip.icon}</span>
+              <div>
+                <b style="font-size:13px;color:var(--ink);">${esc(tip.title)}</b>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4;">
+                  ${esc(tip.desc)}
+                </div>
+              </div>
+            </div>
+          `).join('')}
+
+          <div style="background:linear-gradient(135deg, #1e293b, #0f172a);color:#fff;border-radius:12px;padding:14px;margin-top:6px;">
+            <div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px;">
+              📞 ទំនាក់ទំនង Reception រមណីយដ្ឋាន
+            </div>
+            <div style="font-size:12px;opacity:0.85;margin-top:4px;">
+              សម្រាប់បញ្ហាបន្ទប់ សោ ឬជំនួយផ្សេងៗក្នុងរីហ្សត៖
+            </div>
+            <a href="tel:023999888" style="display:inline-block;background:#38bdf8;color:#0f172a;font-weight:700;padding:6px 14px;border-radius:8px;text-decoration:none;font-size:12px;margin-top:8px;">
+              📞 Call: 023 999 888 (Front Desk)
+            </a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Attach Top Header Tab clicks
+    document.querySelectorAll('#ext-map-tabs-bar .ext-map-tab-btn').forEach(btn => {
+      btn.onclick = () => {
+        currentTab = btn.dataset.tab;
+        renderActiveView();
+      };
+    });
+
+    renderActiveView();
+  }
+
+  function mountHeaderResortMapBtn() {
+    const whoEl = document.querySelector('.top-in .who');
+    if (!whoEl) return;
+    let btn = document.getElementById('ext-header-map-btn');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'ext-header-map-btn';
+      btn.className = 'ext-header-pill';
+      btn.type = 'button';
+      btn.title = 'ផែនទីរីហ្សត & បន្ទប់ស្នាក់នៅ (Resort Map & Zones)';
+      btn.innerHTML = `🗺️ <span class="ext-pill-txt" style="font-weight:600;">ផែនទី</span>`;
+      btn.onclick = () => showResortMapModal();
+
+      const logoutBtn = whoEl.querySelector('[data-act="logout"]');
+      if (logoutBtn) whoEl.insertBefore(btn, logoutBtn);
+      else whoEl.appendChild(btn);
+    }
+  }
+
+  function enhanceRoomCardsWithMapBtn() {
+    const roomHeaders = document.querySelectorAll('.rcard .rtitle b, .room');
+    roomHeaders.forEach(el => {
+      const text = el.textContent.trim();
+      const match = text.match(/\b([ABCD]\d{3})\b/);
+      if (match && !el.dataset.hasMapBtn) {
+        el.dataset.hasMapBtn = 'true';
+        const rNo = match[1];
+        const link = document.createElement('span');
+        link.className = 'ext-room-map-link';
+        link.title = `មើលទីតាំង ${rNo} លើផែនទី`;
+        link.innerHTML = `🗺️`;
+        link.onclick = (e) => {
+          e.stopPropagation();
+          showResortMapModal(rNo);
+        };
+        if (el.parentNode) el.parentNode.appendChild(link);
+      }
+    });
+  }
+
   // ---------------------------------------------------------
   // 9. Floating Navigation Dock
   // ---------------------------------------------------------
@@ -4327,6 +5338,9 @@
       <button class="ext-nav-btn" id="ext-nav-weather" title="ការព្យាករណ៍អាកាសធាតុគិរីរម្យ & បញ្ជីឥវ៉ាន់">
         <span class="icon">🌤️</span><span id="ext-nav-weather-txt">អាកាសធាតុ</span>
       </button>
+      <button class="ext-nav-btn" id="ext-nav-map" title="ផែនទីរីហ្សត & បន្ទប់ស្នាក់នៅ (Resort Map & Zones)">
+        <span class="icon">🗺️</span><span>ផែនទី</span>
+      </button>
       <button class="ext-nav-btn" id="ext-nav-qr" title="${dockTitle}">
         <span class="icon">${canScan ? '📷' : '🎫'}</span>
         <span>${dockLabel}</span>
@@ -4337,6 +5351,8 @@
     dock.querySelector('#ext-nav-sched').onclick = showScheduleModal;
     dock.querySelector('#ext-nav-contact').onclick = showContactsModal;
     dock.querySelector('#ext-nav-weather').onclick = showWeatherModal;
+    const mapNavBtn = dock.querySelector('#ext-nav-map');
+    if (mapNavBtn) mapNavBtn.onclick = () => showResortMapModal();
     dock.querySelector('#ext-nav-qr').onclick = () => {
       const activeUser = getMe();
       if (!activeUser) {
@@ -4504,7 +5520,9 @@
     renderAnnouncementBanner();
     mountHeaderWeatherPill();
     mountHeaderBroadcastBtn();
+    mountHeaderResortMapBtn();
     mountNavigationDock();
+    enhanceRoomCardsWithMapBtn();
     injectPersonalQrBadge();
     updateCheckinBadges();
 
