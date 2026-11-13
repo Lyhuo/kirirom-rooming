@@ -19,12 +19,12 @@
 
   // 2. Default Config (អ្នកអាចបិទភ្ជាប់ Config ផ្ទាល់នៅទីនេះប្រសិនបើចង់)
   const defaultFileConfig = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyDqPkv5R02oHZSdHlDTRWT_W5UsbFVHVOM",
+    authDomain: "kirirom-rooming.firebaseapp.com",
+    projectId: "kirirom-rooming",
+    storageBucket: "kirirom-rooming.firebasestorage.app",
+    messagingSenderId: "1098326338072",
+    appId: "1:1098326338072:web:7eaec5e376057f4374b16d"
   };
 
   const activeConfig = (savedConfig && savedConfig.apiKey) 
@@ -34,7 +34,7 @@
   window.FIREBASE_CONFIG = activeConfig;
 
   // 3. Enable Offline Persistence ស្វ័យប្រវត្តពេល Firebase ដំណើរការ
-  if (window.FIREBASE_CONFIG && typeof firebase !== 'undefined' && firebase.firestore) {
+  if (window.FIREBASE_CONFIG && typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
     try {
       firebase.firestore().enablePersistence({ synchronizeTabs: true }).catch(err => {
         console.warn('Firestore persistence notification:', err.code);

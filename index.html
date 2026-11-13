@@ -192,7 +192,8 @@ body.dense .bg::after{opacity:.9}
 <div id="modal" class="ov" hidden></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<script>window.FIREBASE_CONFIG={"apiKey": "AIzaSyDqPkv5R02oHZSdHlDTRWT_W5UsbFVHVOM", "authDomain": "kirirom-rooming.firebaseapp.com", "projectId": "kirirom-rooming", "storageBucket": "kirirom-rooming.firebasestorage.app", "messagingSenderId": "1098326338072", "appId": "1:1098326338072:web:7eaec5e376057f4374b16d"};</script>
+<script src="firebase-config.js?v=2026.16"></script>
+<script>if(!window.FIREBASE_CONFIG)window.FIREBASE_CONFIG={"apiKey": "AIzaSyDqPkv5R02oHZSdHlDTRWT_W5UsbFVHVOM", "authDomain": "kirirom-rooming.firebaseapp.com", "projectId": "kirirom-rooming", "storageBucket": "kirirom-rooming.firebasestorage.app", "messagingSenderId": "1098326338072", "appId": "1:1098326338072:web:7eaec5e376057f4374b16d"};</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -691,5 +692,5 @@ if(FB){subscribeDb();}
 if(!window.claude?.use){dl={save:async({filename,data})=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}}}
 render();
 </script>
-<script src="features.js?v=2026.15"></script>
+<script src="features.js?v=2026.16"></script>
 </body></html>
