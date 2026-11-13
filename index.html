@@ -233,6 +233,7 @@ if(window.FIREBASE_CONFIG&&typeof firebase!=='undefined'){
     firebase.initializeApp(window.FIREBASE_CONFIG);
     FB=firebase.firestore(); fbAuth=firebase.auth();
     db={doc:p=>FB.doc(p),collection:c=>FB.collection(c)}; dbOk=true;
+    window.FB=FB; window.db=db; window.dbOk=true;
     fbAuth.onAuthStateChanged(u=>{
       authed=!!u&&u.email===ADMIN_EMAIL;
       if(!me&&!pendingAdmin){try{const s=localStorage.getItem('krr_sid');if(s)doLogin(s,true)}catch(e){}}
@@ -690,5 +691,5 @@ if(FB){subscribeDb();}
 if(!window.claude?.use){dl={save:async({filename,data})=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data],{type:'text/csv;charset=utf-8'}));a.download=filename;document.body.appendChild(a);a.click();a.remove()}}}
 render();
 </script>
-<script src="features.js?v=2026.8"></script>
+<script src="features.js?v=2026.10"></script>
 </body></html>

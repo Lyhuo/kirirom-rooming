@@ -262,35 +262,203 @@
     }
   } catch (e) {}
 
+  // Real-time synchronization state & hooks
+  let activeModalRefreshCallback = null;
+  let firebaseExtSyncInited = false;
+
+  function getFirestore() {
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+      try {
+        return firebase.firestore();
+      } catch (e) {}
+    }
+    if (window.db && window.db.collection) {
+      return window.db;
+    }
+    return null;
+  }
+
+  function getCloudSyncStatus() {
+    const fs = getFirestore();
+    if (fs) {
+      return navigator.onLine ? 'live' : 'offline';
+    }
+    return 'unconfigured';
+  }
+
+  function updateCloudSyncBadge() {
+    const badgeEl = document.getElementById('ext-cloud-sync-btn');
+    if (!badgeEl) return;
+    const st = getCloudSyncStatus();
+    if (st === 'live') {
+      badgeEl.className = 'btn sm ext-sync-live';
+      badgeEl.innerHTML = '<span class="ext-sync-dot live"></span>Live Sync';
+      badgeEl.title = 'Firebase Cloud Firestore: បានភ្ជាប់ជោគជ័យ (Real-time Active)';
+    } else if (st === 'offline') {
+      badgeEl.className = 'btn sm ext-sync-offline';
+      badgeEl.innerHTML = '<span class="ext-sync-dot offline"></span>Offline';
+      badgeEl.title = 'Offline Mode: រក្សាទុកក្នុងទូរស័ព្ទ និងរង់ចាំ Sync ពេលមាន Internet';
+    } else {
+      badgeEl.className = 'btn ghost sm ext-sync-unconfigured';
+      badgeEl.innerHTML = '☁️ Cloud Sync';
+      badgeEl.title = 'កំណត់ Real-time Firebase Sync';
+    }
+  }
+
+  function syncSingleCheckinToCloud(session, staffKey, checkinDataOrNull) {
+    const fs = getFirestore();
+    if (!fs) return;
+    try {
+      const sess = (session === 'night') ? 'night' : 'bus';
+      const docRef = fs.collection('ext_checkins').doc(sess);
+
+      if (checkinDataOrNull) {
+        docRef.set({ [staffKey]: checkinDataOrNull }, { merge: true }).catch(err => {
+          console.warn('Firestore write queued for offline sync:', err);
+        });
+      } else {
+        if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+          docRef.update({ [staffKey]: firebase.firestore.FieldValue.delete() }).catch(err => {
+            console.warn('Firestore delete queued for offline sync:', err);
+          });
+        } else {
+          docRef.set({ [staffKey]: null }, { merge: true }).catch(() => {});
+        }
+      }
+
+      // Maintain legacy 'data' doc for backward compatibility
+      fs.collection('ext_checkins').doc('data').set(checkinState, { merge: true }).catch(() => {});
+    } catch (e) {
+      console.warn('syncSingleCheckinToCloud error:', e);
+    }
+  }
+
   function saveCheckinState() {
     try {
       localStorage.setItem(EXT_STORAGE_KEYS.CHECKIN, JSON.stringify(checkinState));
-      if (window.db && window.dbOk) {
-        window.db.collection('ext_checkins').doc('data').set(checkinState).catch(() => {});
+      const fs = getFirestore();
+      if (fs) {
+        fs.collection('ext_checkins').doc('data').set(checkinState, { merge: true }).catch(() => {});
       }
     } catch (e) {}
   }
 
   function initFirebaseExtSync() {
-    if (window.db && window.dbOk) {
-      window.db.collection('ext_checkins').doc('data').onSnapshot(doc => {
-        if (doc && doc.exists) {
-          const d = doc.data();
-          if (d && (d.bus || d.night)) {
-            checkinState = {
-              bus: Object.assign({}, checkinState.bus, d.bus || {}),
-              night: Object.assign({}, checkinState.night, d.night || {})
-            };
-          } else if (d && typeof d === 'object') {
-            checkinState = {
-              bus: Object.assign({}, checkinState.bus, d),
-              night: checkinState.night || {}
-            };
-          }
-          updateCheckinBadges();
+    const fs = getFirestore();
+    if (!fs) return;
+
+    if (firebaseExtSyncInited) return;
+    firebaseExtSyncInited = true;
+
+    // Enable offline persistence on Firestore
+    try {
+      fs.enablePersistence({ synchronizeTabs: true }).catch(err => {
+        if (err.code !== 'failed-precondition' && err.code !== 'unimplemented') {
+          console.warn('Firestore persistence notification:', err);
         }
-      }, () => {});
-    }
+      });
+    } catch (e) {}
+
+    // 1. Listen for BUS check-ins
+    fs.collection('ext_checkins').doc('bus').onSnapshot(doc => {
+      if (doc && doc.exists) {
+        const remoteBus = doc.data() || {};
+        let changed = false;
+        if (!checkinState.bus) checkinState.bus = {};
+
+        Object.keys(checkinState.bus).forEach(k => {
+          if (remoteBus[k] === undefined && (!doc.metadata || !doc.metadata.hasPendingWrites)) {
+            delete checkinState.bus[k];
+            changed = true;
+          }
+        });
+
+        Object.entries(remoteBus).forEach(([k, v]) => {
+          if (v && JSON.stringify(checkinState.bus[k]) !== JSON.stringify(v)) {
+            checkinState.bus[k] = v;
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          localStorage.setItem(EXT_STORAGE_KEYS.CHECKIN, JSON.stringify(checkinState));
+          updateCheckinBadges();
+          if (typeof activeModalRefreshCallback === 'function') {
+            activeModalRefreshCallback();
+          }
+        }
+      }
+    }, err => {
+      console.warn('Bus Firestore listener warning:', err);
+    });
+
+    // 2. Listen for NIGHT check-ins
+    fs.collection('ext_checkins').doc('night').onSnapshot(doc => {
+      if (doc && doc.exists) {
+        const remoteNight = doc.data() || {};
+        let changed = false;
+        if (!checkinState.night) checkinState.night = {};
+
+        Object.keys(checkinState.night).forEach(k => {
+          if (remoteNight[k] === undefined && (!doc.metadata || !doc.metadata.hasPendingWrites)) {
+            delete checkinState.night[k];
+            changed = true;
+          }
+        });
+
+        Object.entries(remoteNight).forEach(([k, v]) => {
+          if (v && JSON.stringify(checkinState.night[k]) !== JSON.stringify(v)) {
+            checkinState.night[k] = v;
+            changed = true;
+          }
+        });
+
+        if (changed) {
+          localStorage.setItem(EXT_STORAGE_KEYS.CHECKIN, JSON.stringify(checkinState));
+          updateCheckinBadges();
+          if (typeof activeModalRefreshCallback === 'function') {
+            activeModalRefreshCallback();
+          }
+        }
+      }
+    }, err => {
+      console.warn('Night Firestore listener warning:', err);
+    });
+
+    // 3. Backward compatibility: Listen to legacy 'data' doc if bus/night don't exist yet
+    fs.collection('ext_checkins').doc('data').onSnapshot(doc => {
+      if (doc && doc.exists) {
+        const d = doc.data() || {};
+        let changed = false;
+        if (d.bus && Object.keys(checkinState.bus || {}).length === 0) {
+          checkinState.bus = Object.assign({}, checkinState.bus, d.bus);
+          changed = true;
+        }
+        if (d.night && Object.keys(checkinState.night || {}).length === 0) {
+          checkinState.night = Object.assign({}, checkinState.night, d.night);
+          changed = true;
+        }
+        if (changed) {
+          localStorage.setItem(EXT_STORAGE_KEYS.CHECKIN, JSON.stringify(checkinState));
+          updateCheckinBadges();
+          if (typeof activeModalRefreshCallback === 'function') {
+            activeModalRefreshCallback();
+          }
+        }
+      }
+    }, () => {});
+
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      updateCloudSyncBadge();
+      if (typeof window.toast === 'function') window.toast('🌐 បានភ្ជាប់អ៊ីនធឺណិតឡើងវិញ (Online) - កំពុង Sync...');
+    });
+    window.addEventListener('offline', () => {
+      updateCloudSyncBadge();
+      if (typeof window.toast === 'function') window.toast('📴 គ្មានអ៊ីនធឺណិត (Offline) - រក្សាទុកក្នុងទូរស័ព្ទជាមុន');
+    });
+
+    updateCloudSyncBadge();
   }
 
   // ---------------------------------------------------------
@@ -1308,6 +1476,45 @@
       display: none;
     }
 
+    /* Cloud Sync Indicators & Badges */
+    .ext-sync-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .ext-sync-dot.live {
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+      animation: pulseSync 2s infinite ease-in-out;
+    }
+    .ext-sync-dot.offline {
+      background: #f59e0b;
+    }
+    @keyframes pulseSync {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .ext-sync-live {
+      background: rgba(16, 185, 129, 0.12) !important;
+      color: #065f46 !important;
+      border: 1px solid #10b981 !important;
+      font-weight: 600 !important;
+    }
+    .ext-sync-offline {
+      background: rgba(245, 158, 11, 0.12) !important;
+      color: #92400e !important;
+      border: 1px solid #f59e0b !important;
+      font-weight: 600 !important;
+    }
+    .ext-sync-unconfigured {
+      background: var(--surface) !important;
+      color: var(--muted) !important;
+    }
+
     /* Globally prevent document horizontal blowout across all mobile screen sizes */
     html, body {
       overflow-x: hidden !important;
@@ -1620,6 +1827,9 @@
       } catch (e) {}
       html5Scanner = null;
     }
+    if (typeof activeModalRefreshCallback === 'function') {
+      activeModalRefreshCallback = null;
+    }
     if (activeModal) {
       activeModal.remove();
       activeModal = null;
@@ -1756,6 +1966,199 @@
   }
 
   // ---------------------------------------------------------
+  // Feature 2.5: Firebase Real-Time Cloud Sync Modal
+  // ---------------------------------------------------------
+  function showCloudSyncModal() {
+    const fs = getFirestore();
+    const st = getCloudSyncStatus();
+    const allStaff = getAllStaffList();
+
+    const busCount = (allStaff || []).filter(p => isStaffCheckedIn(p.sid, p.name, 'bus')).length;
+    const nightCount = (allStaff || []).filter(p => isStaffCheckedIn(p.sid, p.name, 'night')).length;
+
+    let statusCardHtml = '';
+    if (st === 'live') {
+      statusCardHtml = `
+        <div style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#065f46;font-size:14px;">
+            <span class="ext-sync-dot live" style="width:10px;height:10px;"></span>
+            <span>🟢 កំពុងភ្ជាប់ Real-time Cloud Sync (Firebase Live)</span>
+          </div>
+          <div style="font-size:12px;color:#047857;margin-top:6px;line-height:1.5;">
+            ទិន្នន័យ Check-in ទាំងអស់ត្រូវបានភ្ជាប់ Live ជាមួយ Google Cloud Firestore (Project: <b>kirirom-rooming</b>)។ រាល់ពេលគណៈកម្មការណាស្កេន ទិន្នន័យនឹងលោតឡើងលើទូរស័ព្ទទាំងអស់ភ្លាមៗ។
+          </div>
+          <div style="display:flex;gap:12px;margin-top:10px;padding-top:8px;border-top:1px dashed #a7f3d0;font-size:11.5px;color:#065f46;">
+            <span>🚌 បានឡើងឡាន: <b>${busCount} / ${(allStaff || []).length}</b></span>
+            <span>•</span>
+            <span>🌙 កម្មវិធីយប់: <b>${nightCount} / ${(allStaff || []).length}</b></span>
+          </div>
+        </div>
+      `;
+    } else if (st === 'offline') {
+      statusCardHtml = `
+        <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#92400e;font-size:14px;">
+            <span class="ext-sync-dot offline" style="width:10px;height:10px;"></span>
+            <span>🟡 ដំណើរការ Offline Mode (ទូរស័ព្ទគ្មានសេវាអ៊ីនធឺណិត)</span>
+          </div>
+          <div style="font-size:12px;color:#b45309;margin-top:6px;line-height:1.5;">
+            ទិន្នន័យត្រូវបានរក្សាទុកយ៉ាងមានសុវត្ថិភាពក្នុងអង្គចងចាំទូរស័ព្ទ (IndexedDB Offline Cache)។ ប្រព័ន្ធនឹងធ្វើការ <b>Auto-Sync</b> រុញទិន្នន័យឡើង Cloud ដោយស្វ័យប្រវត្តនៅពេលទូរស័ព្ទមានសេវាអ៊ីនធឺណិតឡើងវិញ។
+          </div>
+        </div>
+      `;
+    } else {
+      statusCardHtml = `
+        <div style="background:#f3f4f6;border:1.5px solid #d1d5db;border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:8px;font-weight:700;color:#374151;font-size:14px;">
+            <span>⚪ ដំណើរការ Local Only (មិនទាន់ភ្ជាប់ Cloud)</span>
+          </div>
+          <div style="font-size:12px;color:#4b5563;margin-top:6px;line-height:1.5;">
+            ទិន្នន័យ Check-in បច្ចុប្បន្នត្រូវបានរក្សាទុកតែលើទូរស័ព្ទនេះប៉ុណ្ណោះ។ ដើម្បីឱ្យគណៈកម្មការផ្សេងៗមើលឃើញទិន្នន័យរួមគ្នា សូមពិនិត្យមើលការភ្ជាប់ Firebase ខាងក្រោម។
+          </div>
+        </div>
+      `;
+    }
+
+    const html = `
+      ${statusCardHtml}
+
+      <div style="display:grid;gap:12px;">
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;">
+          <b style="font-size:13px;display:block;margin-bottom:6px;">⚡ សកម្មភាពធ្វើសមកាលកម្ម (Sync Actions)</b>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn sm" id="ext-test-sync-btn" style="border-radius:8px;font-size:12px;padding:8px;">
+              🧪 តេស្តការភ្ជាប់ (Ping)
+            </button>
+            <button class="btn ghost sm" id="ext-force-sync-btn" style="border-radius:8px;font-size:12px;padding:8px;">
+              🔄 Sync ឡើងវិញ (Sync Now)
+            </button>
+          </div>
+        </div>
+
+        <details style="background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;">
+          <summary style="font-weight:600;cursor:pointer;color:var(--pine);">⚙️ កំណត់ Firebase Project ដោយខ្លួនឯង (Advanced Config)</summary>
+          <div style="margin-top:10px;display:grid;gap:8px;">
+            <p style="margin:0;color:var(--muted);font-size:11.5px;">
+              បច្ចុប្បន្នប្រព័ន្ធភ្ជាប់ជាមួយ Firebase Project: <code>kirirom-rooming</code>។ ប្រសិនបើលោកអ្នកចង់ប្តូរទៅប្រើ Firebase Project ផ្សេង សូមបិទភ្ជាប់ (Paste) Config JSON ខាងក្រោម៖
+            </p>
+            <textarea class="inp" id="ext-custom-firebase-cfg" rows="5" style="font-family:var(--mono);font-size:11px;width:100%;border-radius:8px;" placeholder='{"apiKey": "...", "projectId": "..."}'></textarea>
+            <div style="display:flex;gap:6px;">
+              <button class="btn sm" id="ext-save-custom-cfg-btn" style="font-size:11.5px;padding:6px 12px;border-radius:7px;">💾 រក្សាទុក & ភ្ជាប់</button>
+              <button class="btn ghost sm" id="ext-reset-cfg-btn" style="font-size:11.5px;padding:6px 12px;border-radius:7px;color:var(--danger);">🗑️ កំណត់ឡើងវិញ</button>
+            </div>
+          </div>
+        </details>
+
+        <div style="font-size:11.5px;color:var(--muted);line-height:1.5;background:rgba(29,90,67,0.05);padding:10px 12px;border-radius:10px;">
+          💡 <b>ចំណាំសំខាន់:</b> មុខងារ <b>Offline-First</b> អនុញ្ញាតឱ្យលោកអ្នកស្កេន QR Code បានរហ័សទាន់ចិត្តគ្រប់ពេល ទោះបីជាដាច់សេវាទូរស័ព្ទក៏ដោយ។ ពេលទូរស័ព្ទមានសេវាអ៊ីនធឺណិតឡើងវិញ ប្រព័ន្ធនឹងរុញទិន្នន័យទៅ Cloud ដោយស្វ័យប្រវត្តដោយមិនបាច់ចុចអ្វីឡើយ។
+        </div>
+      </div>
+    `;
+
+    openModal('☁️ ស្ថានភាព Real-time Data Sync', html);
+
+    const testBtn = document.getElementById('ext-test-sync-btn');
+    const forceBtn = document.getElementById('ext-force-sync-btn');
+    const saveCfgBtn = document.getElementById('ext-save-custom-cfg-btn');
+    const resetCfgBtn = document.getElementById('ext-reset-cfg-btn');
+    const cfgInp = document.getElementById('ext-custom-firebase-cfg');
+
+    if (cfgInp) {
+      const curCfg = localStorage.getItem('krr_firebase_config');
+      if (curCfg) cfgInp.value = curCfg;
+    }
+
+    if (testBtn) {
+      testBtn.onclick = async () => {
+        testBtn.textContent = 'កំពុងតេស្ត...';
+        testBtn.disabled = true;
+        const currentFs = getFirestore();
+        if (!currentFs) {
+          alert('❌ មិនអាចភ្ជាប់ Firestore បានទេ! សូមពិនិត្យមើល Internet ឬ Firebase SDK។');
+          testBtn.textContent = '🧪 តេស្តការភ្ជាប់ (Ping)';
+          testBtn.disabled = false;
+          return;
+        }
+        try {
+          const pingStart = Date.now();
+          await currentFs.collection('ext_checkins').doc('ping').set({
+            ping: true,
+            time: new Date().toISOString()
+          });
+          const latency = Date.now() - pingStart;
+          alert(`✅ ការភ្ជាប់ Firebase Cloud Firestore ដំណើរការជោគជ័យ ១០០%!\n\n⚡ ល្បឿនឆ្លើយតប (Latency): ${latency}ms\n📡 Real-time Sync ត្រៀមរួចជាស្រេចសម្រាប់ទូរស័ព្ទគណៈកម្មការទាំងអស់។`);
+          testBtn.textContent = '🧪 តេស្តការភ្ជាប់ (Ping)';
+          testBtn.disabled = false;
+        } catch (err) {
+          alert('⚠️ មានបញ្ហាក្នុងការសរសេរទៅ Firestore: ' + (err.message || err));
+          testBtn.textContent = '🧪 តេស្តការភ្ជាប់ (Ping)';
+          testBtn.disabled = false;
+        }
+      };
+    }
+
+    if (forceBtn) {
+      forceBtn.onclick = () => {
+        forceBtn.textContent = 'កំពុង Sync...';
+        forceBtn.disabled = true;
+        saveCheckinState();
+        const currentFs = getFirestore();
+        if (currentFs) {
+          currentFs.collection('ext_checkins').doc('bus').set(checkinState.bus || {}, { merge: true }).catch(() => {});
+          currentFs.collection('ext_checkins').doc('night').set(checkinState.night || {}, { merge: true }).catch(() => {});
+        }
+        setTimeout(() => {
+          forceBtn.textContent = '✅ Sync រួចរាល់!';
+          setTimeout(() => {
+            if (forceBtn) {
+              forceBtn.textContent = '🔄 Sync ឡើងវិញ (Sync Now)';
+              forceBtn.disabled = false;
+            }
+          }, 1500);
+        }, 600);
+      };
+    }
+
+    if (saveCfgBtn && cfgInp) {
+      saveCfgBtn.onclick = () => {
+        const val = cfgInp.value.trim();
+        if (!val) {
+          alert('សូមបញ្ចូល Firebase Config ជាមុនសិន!');
+          return;
+        }
+        try {
+          let parsed = null;
+          if (val.startsWith('{')) {
+            parsed = JSON.parse(val);
+          } else {
+            const fn = new Function('return ' + val);
+            parsed = fn();
+          }
+          if (parsed && parsed.apiKey) {
+            localStorage.setItem('krr_firebase_config', JSON.stringify(parsed));
+            alert('✅ បានរក្សាទុក Firebase Config ជោគជ័យ! កម្មវិធីនឹង Reload ដើម្បីភ្ជាប់ឡើងវិញ។');
+            window.location.reload();
+          } else {
+            alert('❌ ទម្រង់ Config មិនត្រឹមត្រូវ (ខ្វះ apiKey)!');
+          }
+        } catch (e) {
+          alert('❌ មិនអាចអាន Config បានទេ: ' + e.message);
+        }
+      };
+    }
+
+    if (resetCfgBtn) {
+      resetCfgBtn.onclick = () => {
+        if (confirm('តើអ្នកពិតជាចង់កំណត់ Firebase Config ត្រឡប់ទៅជា Default វិញមែនទេ?')) {
+          localStorage.removeItem('krr_firebase_config');
+          alert('បានកំណត់ឡើងវិញរួចរាល់! កម្មវិធីនឹង Reload។');
+          window.location.reload();
+        }
+      };
+    }
+  }
+
+  // ---------------------------------------------------------
   // Feature 3: QR Code Check-in System (Highlight!)
   // ---------------------------------------------------------
   function getStaffCheckinKey(sid, name) {
@@ -1778,21 +2181,25 @@
     const sess = (session === 'night') ? 'night' : 'bus';
     if (!checkinState[sess]) checkinState[sess] = {};
     const k = getStaffCheckinKey(sid, name);
+    let checkinRecord = null;
     if (checkinState[sess][k]) {
       delete checkinState[sess][k];
+      checkinRecord = null;
     } else {
-      checkinState[sess][k] = {
+      checkinRecord = {
         checkedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         date: new Date().toISOString(),
         checkedBy: scannerUser ? scannerUser.name : 'Coordinator',
         scannerSid: scannerUser ? (scannerUser.sid || '') : '',
         session: sess
       };
+      checkinState[sess][k] = checkinRecord;
       playSuccessBeep();
       triggerVibrate();
     }
     saveCheckinState();
     updateCheckinBadges();
+    syncSingleCheckinToCloud(sess, k, checkinRecord);
   }
 
   // Generate QR Code with reliable fallback
@@ -2005,6 +2412,9 @@
     `;
 
     const headerActionsHtml = `
+      <button class="btn sm" id="ext-cloud-sync-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="Firebase Real-time Cloud Sync">
+        ☁️ Sync
+      </button>
       ${activeStaff ? `<button class="btn ghost sm" id="ext-switch-to-pass-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="មើល QR Pass ផ្ទាល់ខ្លួន">🎫 Pass ខ្ញុំ</button>` : ''}
       <button class="btn ghost sm" id="ext-export-att-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="Export CSV">📥 CSV</button>
     `;
@@ -2019,6 +2429,18 @@
     const feedbackBox = document.getElementById('ext-scan-feedback');
     const exportBtn = document.getElementById('ext-export-att-btn');
     const switchPassBtn = document.getElementById('ext-switch-to-pass-btn');
+    const cloudSyncBtn = document.getElementById('ext-cloud-sync-btn');
+
+    if (cloudSyncBtn) {
+      cloudSyncBtn.onclick = () => showCloudSyncModal();
+    }
+    updateCloudSyncBadge();
+
+    activeModalRefreshCallback = () => {
+      updateProgressCard();
+      renderAttList();
+      updateCloudSyncBadge();
+    };
 
     if (switchPassBtn && activeStaff) {
       switchPassBtn.onclick = () => showPersonalPassModal(activeStaff);

@@ -1,10 +1,11 @@
 // Service Worker for Kirirom Rooming & Outing 2026 PWA
-const CACHE_NAME = 'krr-outing-v2026.8';
+const CACHE_NAME = 'krr-outing-v2026.10';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
   './features.js',
+  './firebase-config.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -16,7 +17,10 @@ const CDN_ASSETS = [
   'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Kantumruy+Pro:ital,wght@0,300..700;1,300..700&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js'
 ];
 
 // Install: pre-cache static assets
