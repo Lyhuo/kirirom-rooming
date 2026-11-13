@@ -881,6 +881,81 @@
       letter-spacing: -0.01em;
     }
 
+    /* Confirmation Modal (Safety Guard on Revoke) */
+    .ext-confirm-ov {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 20, 15, 0.72) !important;
+      backdrop-filter: blur(8px) !important;
+      -webkit-backdrop-filter: blur(8px) !important;
+      z-index: 250 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 16px !important;
+      box-sizing: border-box !important;
+      animation: fadeIn 0.15s ease-out;
+    }
+    .ext-confirm-card {
+      background: var(--surface) !important;
+      border: 1px solid color-mix(in srgb, var(--line) 85%, transparent) !important;
+      border-radius: 20px !important;
+      padding: 22px 20px !important;
+      max-width: 370px !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45), 0 0 1px 1px rgba(255,255,255,0.1) !important;
+      text-align: center !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    .ext-confirm-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: #fef2f2;
+      color: #dc2626;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      margin: 0 auto;
+      border: 1.5px solid #fecaca;
+    }
+    .ext-confirm-title {
+      font-size: 17px !important;
+      font-weight: 700 !important;
+      color: var(--ink) !important;
+      margin: 0 !important;
+      font-family: var(--display);
+    }
+    .ext-confirm-msg {
+      font-size: 13.5px !important;
+      color: var(--muted) !important;
+      line-height: 1.55 !important;
+      margin: 0 !important;
+    }
+    .ext-confirm-msg b {
+      color: var(--ink);
+    }
+    .ext-confirm-actions {
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 10px !important;
+      margin-top: 6px !important;
+    }
+    .ext-confirm-actions button {
+      padding: 10px 12px !important;
+      font-size: 12.5px !important;
+      font-weight: 600 !important;
+      border-radius: 10px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+
     /* Timeline Styling */
     .ext-timeline {
       display: grid;
@@ -1464,6 +1539,55 @@
   }
 
   // ---------------------------------------------------------
+  // Safe Confirmation Dialog (Prevents accidental Revoke/Undo)
+  // ---------------------------------------------------------
+  let activeConfirm = null;
+
+  function closeConfirmDialog() {
+    if (activeConfirm) {
+      activeConfirm.remove();
+      activeConfirm = null;
+    }
+  }
+
+  function showConfirmDialog({ title, message, okText = 'យល់ព្រម', cancelText = 'បោះបង់', danger = false, onConfirm, onCancel }) {
+    closeConfirmDialog();
+    const ov = document.createElement('div');
+    ov.className = 'ext-confirm-ov';
+    ov.innerHTML = `
+      <div class="ext-confirm-card" role="alertdialog" aria-modal="true">
+        <div class="ext-confirm-icon">${danger ? '⚠️' : '❓'}</div>
+        <h3 class="ext-confirm-title">${title}</h3>
+        <div class="ext-confirm-msg">${message}</div>
+        <div class="ext-confirm-actions">
+          <button class="btn ghost sm ext-confirm-btn-cancel">${cancelText}</button>
+          <button class="btn sm ext-confirm-btn-ok" style="${danger ? 'background:#dc2626 !important;border-color:#dc2626 !important;color:#ffffff !important;' : ''}">${okText}</button>
+        </div>
+      </div>
+    `;
+
+    ov.querySelector('.ext-confirm-btn-cancel').onclick = () => {
+      closeConfirmDialog();
+      if (onCancel) onCancel();
+    };
+
+    ov.querySelector('.ext-confirm-btn-ok').onclick = () => {
+      closeConfirmDialog();
+      if (onConfirm) onConfirm();
+    };
+
+    ov.onclick = (e) => {
+      if (e.target === ov) {
+        closeConfirmDialog();
+        if (onCancel) onCancel();
+      }
+    };
+
+    document.body.appendChild(ov);
+    activeConfirm = ov;
+  }
+
+  // ---------------------------------------------------------
   // Feature 1: កាលវិភាគកម្មវិធី (Schedule Modal)
   // ---------------------------------------------------------
   function showScheduleModal() {
@@ -1957,7 +2081,31 @@
           }
           const id = btn.dataset.toggleChk;
           const staff = allStaff.find(s => (s.sid === id || s.name === id));
-          if (staff) {
+          if (!staff) return;
+
+          const isAlreadyChecked = isStaffCheckedIn(staff.sid, staff.name, activeSession);
+
+          if (isAlreadyChecked) {
+            // Safe Confirmation Dialog: Prevents accidental mis-clicks when scrolling or holding the phone!
+            const sessionTitle = (activeSession === 'night') ? 'កម្មវិធីរាត្រីសមោសរ (Gala Dinner)' : `ឡើងឡាន (${staff.van || 'Bus'})`;
+            const pendingStatusText = (activeSession === 'night') ? 'មិនទាន់ចូលរួម' : 'មិនទាន់ឡើងឡាន';
+            showConfirmDialog({
+              title: '⚠️ បញ្ជាក់ការដកវត្តមាន',
+              message: `តើលោកអ្នកពិតជាចង់ដកវត្តមានរបស់ <b>${staff.name}</b> ${staff.sid ? `(${staff.sid})` : ''} ពី <b>${sessionTitle}</b> ត្រឡប់ទៅជា <b>"${pendingStatusText}"</b> វិញមែនទេ?`,
+              okText: '🗑️ យល់ព្រមដក',
+              cancelText: 'បោះបង់',
+              danger: true,
+              onConfirm: () => {
+                toggleCheckin(staff.sid, staff.name, activeSession, activeStaff);
+                updateProgressCard();
+                renderAttList();
+                if (typeof window.toast === 'function') {
+                  window.toast(`↩️ បានដកវត្តមាន ${staff.name} រួចរាល់`);
+                }
+              }
+            });
+          } else {
+            // Fast 1-tap Check-in
             toggleCheckin(staff.sid, staff.name, activeSession, activeStaff);
             updateProgressCard();
             renderAttList();
