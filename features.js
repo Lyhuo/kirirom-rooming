@@ -240,6 +240,17 @@
     return '';
   }
 
+  function getShortRoleLabel(user) {
+    if (!user) return 'Staff';
+    if (user.admin) return 'Admin';
+    const isTr = isTransportationRole(user);
+    const isAct = isActivityRole(user);
+    if (isTr && isAct) return 'Admin/Coord';
+    if (isTr) return 'Transportation';
+    if (isAct) return 'Activity Team';
+    return user.role || 'Staff';
+  }
+
   // ---------------------------------------------------------
   // 4. Persistent State Management (LocalStorage + Firebase Sync)
   // ---------------------------------------------------------
@@ -1696,13 +1707,17 @@
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
-        padding-bottom: 10px !important;
+        padding-bottom: 8px !important;
+        gap: 8px !important;
       }
       .ext-modal-header h2, .modal h2 {
         font-size: 15px !important;
         line-height: 1.25 !important;
-        max-width: calc(100% - 64px) !important;
-        word-break: break-word !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        word-break: normal !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
       }
       .ext-chk-user-card {
         flex-direction: column !important;
@@ -1840,12 +1855,13 @@
     closeModal();
     const ov = document.createElement('div');
     ov.className = 'ext-modal-ov';
+    const formattedTitle = (typeof title === 'string' && !title.includes('<')) ? `<h2>${title}</h2>` : title;
     ov.innerHTML = `
       <div class="ext-modal ${isWide ? 'ext-modal-wide' : ''}" role="dialog" aria-modal="true">
         <div class="ext-drag-handle" style="width:36px;height:4px;background:var(--line);border-radius:99px;margin:0 auto 2px auto;display:none;"></div>
         <div class="ext-modal-header">
-          <div style="min-width:0;flex:1 1 auto;">
-            <h2>${title}</h2>
+          <div style="min-width:0;flex:1 1 auto;overflow:hidden;">
+            ${formattedTitle}
           </div>
           <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
             ${headerActionsHtml || ''}
@@ -2355,7 +2371,7 @@
       </div>
 
       <!-- Night Event Compact Banner -->
-      <div id="ext-night-banner-wrapper" style="${activeSession === 'night' ? '' : 'display:none;'}margin-bottom:8px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:6px 10px;display:flex;justify-content:space-between;align-items:center;">
+      <div id="ext-night-banner-wrapper" style="${activeSession === 'night' ? 'display:flex;' : 'display:none;'}margin-bottom:8px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:6px 10px;justify-content:space-between;align-items:center;">
         <span style="color:#6d28d9;font-size:11.5px;font-weight:600;">🌙 កម្មវិធីរាត្រីសមោសរ (បុគ្គលិក ១៥៧ នាក់)</span>
         <span style="background:#7c3aed;color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;">Hall Gate</span>
       </div>
@@ -2391,7 +2407,11 @@
 
       <!-- Search & Status Filter Toolbar (Unified & Compact) -->
       <div style="margin-bottom:8px;display:grid;gap:6px;">
-        <input class="inp" id="ext-att-search" placeholder="🔍 ស្វែងរកឈ្មោះ, Staff ID, ឬ ឡាន..." style="width:100%;padding:7px 11px;font-size:12px;border-radius:9px;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="inp" id="ext-att-search" placeholder="🔍 ស្វែងរកឈ្មោះ, Staff ID, ឬ ឡាន..." style="flex:1 1 auto;min-width:0;padding:7px 11px;font-size:12px;border-radius:9px;">
+          ${activeStaff ? `<button class="btn ghost sm" id="ext-switch-to-pass-btn" style="padding:6px 9px;font-size:11px;border-radius:8px;flex-shrink:0;white-space:nowrap;" title="មើល QR Pass ផ្ទាល់ខ្លួន">🎫 Pass</button>` : ''}
+          <button class="btn ghost sm" id="ext-export-att-btn" style="padding:6px 9px;font-size:11px;border-radius:8px;flex-shrink:0;white-space:nowrap;" title="Export CSV">📥 CSV</button>
+        </div>
         <div style="display:flex;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px;" id="ext-status-chips">
           <button class="btn sm ext-status-chip active" data-status="all" style="white-space:nowrap;flex-shrink:0;font-size:11px;padding:4px 9px;border-radius:7px;">ទាំងអស់ (33)</button>
           <button class="btn ghost sm ext-status-chip" data-status="checked" style="white-space:nowrap;flex-shrink:0;font-size:11px;padding:4px 9px;border-radius:7px;">✅ បានឡើង (0)</button>
@@ -2403,20 +2423,18 @@
     `;
 
     const titleHtml = `
-      <div style="min-width:0;">
-        <div style="font-size:15px;font-weight:700;line-height:1.2;">🎫 Check-in វត្តមាន</div>
-        <div style="font-size:11px;color:var(--muted);font-weight:400;margin-top:2px;">
-          👤 <b>${activeStaff ? activeStaff.name : 'Staff'}</b> • <span style="color:var(--pine);font-weight:600;">${roleBadge || 'គណៈកម្មការ'}</span>
+      <div style="min-width:0;display:grid;gap:2px;">
+        <div style="font-size:15px;font-weight:700;line-height:1.2;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🎫 Check-in វត្តមាន</div>
+        <div style="font-size:11px;color:var(--muted);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          👤 <b>${activeStaff ? activeStaff.name : 'Staff'}</b> • <span style="color:var(--pine);font-weight:600;">${getShortRoleLabel(activeStaff)}</span>
         </div>
       </div>
     `;
 
     const headerActionsHtml = `
-      <button class="btn sm" id="ext-cloud-sync-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="Firebase Real-time Cloud Sync">
+      <button class="btn sm" id="ext-cloud-sync-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;white-space:nowrap;flex-shrink:0;" title="Firebase Real-time Cloud Sync">
         ☁️ Sync
       </button>
-      ${activeStaff ? `<button class="btn ghost sm" id="ext-switch-to-pass-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="មើល QR Pass ផ្ទាល់ខ្លួន">🎫 Pass ខ្ញុំ</button>` : ''}
-      <button class="btn ghost sm" id="ext-export-att-btn" style="padding:4px 8px;font-size:11px;border-radius:8px;" title="Export CSV">📥 CSV</button>
     `;
 
     openModal(titleHtml, html, true, headerActionsHtml);
@@ -2666,7 +2684,7 @@
         const busControls = document.getElementById('ext-bus-controls-wrapper');
         const nightBanner = document.getElementById('ext-night-banner-wrapper');
         if (busControls) busControls.style.display = (activeSession === 'bus') ? 'block' : 'none';
-        if (nightBanner) nightBanner.style.display = (activeSession === 'night') ? 'block' : 'none';
+        if (nightBanner) nightBanner.style.display = (activeSession === 'night') ? 'flex' : 'none';
 
         if (searchInp) {
           searchInp.placeholder = (activeSession === 'bus')
