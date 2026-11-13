@@ -265,10 +265,15 @@
   // 4. Persistent State Management (LocalStorage + Firebase Sync)
   // ---------------------------------------------------------
   const EXT_STORAGE_KEYS = {
-    CHECKIN: 'krr_ext_checkins_v1'
+    CHECKIN: 'krr_ext_checkins_v1',
+    BROADCAST: 'krr_ext_broadcast_v1',
+    WEATHER_CACHE: 'krr_ext_weather_cache_v1',
+    PACKING: 'krr_ext_packing_v1',
+    DISMISSED_BROADCAST: 'krr_ext_dismissed_bc_v1'
   };
 
   let checkinState = { bus: {}, night: {} };
+  let broadcastState = null;
 
   try {
     const savedCheckins = localStorage.getItem(EXT_STORAGE_KEYS.CHECKIN);
@@ -281,6 +286,11 @@
         checkinState = { bus: parsed, night: {} };
       }
     }
+  } catch (e) {}
+
+  try {
+    const savedBc = localStorage.getItem(EXT_STORAGE_KEYS.BROADCAST);
+    if (savedBc) broadcastState = JSON.parse(savedBc);
   } catch (e) {}
 
   // Real-time synchronization state & hooks
@@ -468,6 +478,25 @@
         }
       }
     }, () => {});
+
+    // 4. Listen for Live Broadcast / Announcements
+    fs.collection('ext_checkins').doc('broadcast').onSnapshot(doc => {
+      if (doc && doc.exists) {
+        const remoteBc = doc.data() || null;
+        broadcastState = remoteBc;
+        try {
+          if (remoteBc) localStorage.setItem(EXT_STORAGE_KEYS.BROADCAST, JSON.stringify(remoteBc));
+          else localStorage.removeItem(EXT_STORAGE_KEYS.BROADCAST);
+        } catch (e) {}
+        renderAnnouncementBanner();
+      } else {
+        broadcastState = null;
+        try { localStorage.removeItem(EXT_STORAGE_KEYS.BROADCAST); } catch (e) {}
+        renderAnnouncementBanner();
+      }
+    }, err => {
+      console.warn('Broadcast Firestore listener warning:', err);
+    });
 
     // Listen for online/offline events
     window.addEventListener('online', () => {
@@ -1771,11 +1800,12 @@
 
     @media (max-width: 380px) {
       .ext-nav-btn {
-        padding: 6px 7px;
-        font-size: 11px;
+        padding: 5px 6px !important;
+        font-size: 10.5px !important;
+        gap: 2px !important;
       }
       .ext-nav-btn .icon {
-        font-size: 14px;
+        font-size: 13px !important;
       }
       .ext-badge {
         font-size: 9px;
@@ -1785,6 +1815,191 @@
         font-size: 11px !important;
         padding: 6px 3px !important;
       }
+    }
+
+    /* =========================================================
+     * 14. Live Kirirom Weather & Packing Checklist Styles
+     * ========================================================= */
+    .ext-header-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 600;
+      background: color-mix(in srgb, var(--pine) 12%, var(--surface));
+      color: var(--ink);
+      border: 1px solid color-mix(in srgb, var(--pine) 25%, var(--line));
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s ease;
+    }
+    .ext-header-pill:hover {
+      background: color-mix(in srgb, var(--pine) 22%, var(--surface));
+      transform: translateY(-1px);
+    }
+    .ext-weather-hero {
+      background: linear-gradient(135deg, #1d5a43 0%, #113829 100%);
+      color: #ffffff;
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 12px 28px -6px rgba(29, 90, 67, 0.35);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .ext-weather-hero::after {
+      content: '🌲';
+      position: absolute;
+      right: 12px;
+      bottom: -15px;
+      font-size: 96px;
+      opacity: 0.15;
+      pointer-events: none;
+    }
+    .ext-weather-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .ext-weather-stat-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .ext-weather-stat-icon {
+      font-size: 22px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: color-mix(in srgb, var(--pine) 10%, transparent);
+      border-radius: 10px;
+    }
+    .ext-packing-progress-wrap {
+      background: color-mix(in srgb, var(--line) 40%, transparent);
+      border-radius: 999px;
+      height: 8px;
+      overflow: hidden;
+      margin: 8px 0 14px 0;
+    }
+    .ext-packing-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--pine) 0%, #10b981 100%);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+    .ext-packing-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .ext-packing-item:hover {
+      background: color-mix(in srgb, var(--pine) 5%, var(--surface));
+      border-color: color-mix(in srgb, var(--pine) 35%, var(--line));
+    }
+    .ext-packing-item.checked {
+      background: color-mix(in srgb, var(--pine) 8%, var(--surface));
+      border-color: var(--pine);
+      opacity: 0.88;
+    }
+    .ext-packing-checkbox {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--pine);
+      cursor: pointer;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    /* =========================================================
+     * 15. Live Announcement / Notice Banner Styles
+     * ========================================================= */
+    .ext-announcement-banner {
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin: 10px 0 16px 0;
+      position: relative;
+      display: grid;
+      gap: 8px;
+      box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08);
+      transition: all 0.2s ease;
+      animation: extSlideDown 0.3s ease-out;
+    }
+    @keyframes extSlideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .ext-announcement-banner.urgent {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(220, 38, 38, 0.22) 100%) !important;
+      border: 1.5px solid #ef4444 !important;
+    }
+    .ext-announcement-banner.warning {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.22) 100%) !important;
+      border: 1.5px solid #f59e0b !important;
+    }
+    .ext-announcement-banner.info {
+      background: linear-gradient(135deg, rgba(29, 90, 67, 0.12) 0%, rgba(16, 185, 129, 0.22) 100%) !important;
+      border: 1.5px solid var(--pine) !important;
+    }
+    .ext-announcement-banner.gala {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(109, 40, 217, 0.22) 100%) !important;
+      border: 1.5px solid #8b5cf6 !important;
+    }
+    .ext-bc-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .ext-bc-badge.urgent { background: #fee2e2; color: #b91c1c; }
+    .ext-bc-badge.warning { background: #fef3c7; color: #b45309; }
+    .ext-bc-badge.info { background: #d1fae5; color: #065f46; }
+    .ext-bc-badge.gala { background: #ede9fe; color: #6d28d9; }
+    .ext-pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+      animation: extPulse 1.4s infinite;
+    }
+    @keyframes extPulse {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.7; }
+    }
+    .ext-announcement-minimized {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: color-mix(in srgb, var(--surface) 90%, transparent);
+      border: 1px dashed var(--line);
+      border-radius: 12px;
+      padding: 8px 12px;
+      margin: 10px 0;
+      font-size: 12px;
+      cursor: pointer;
     }
   `;
 
@@ -3214,6 +3429,863 @@
   }
 
   // ---------------------------------------------------------
+  // 8.5 Live Kirirom Weather & Mountain Packing Checklist (Feature 5)
+  // ---------------------------------------------------------
+  const KIRIROM_COORDS = { lat: 11.3197, lon: 104.0583 };
+  let kiriromWeatherInFlight = null;
+
+  function decodeWmoWeather(code, isDay = 1) {
+    const c = Number(code);
+    if (c === 0) {
+      return {
+        text: isDay ? 'មេឃស្រឡះល្អ' : 'មេឃស្រឡះពេលយប់',
+        icon: isDay ? '☀️' : '🌙',
+        desc: 'អាកាសធាតុស្រឡះល្អ គ្មានពពក'
+      };
+    }
+    if (c === 1 || c === 2 || c === 3) {
+      return {
+        text: 'មានពពកតិចតួច',
+        icon: isDay ? '⛅' : '☁️',
+        desc: 'ត្រជាក់ស្រួល មេឃមានពពកខ្លះៗ'
+      };
+    }
+    if (c === 45 || c === 48) {
+      return {
+        text: 'អ័ព្ទត្រជាក់លើភ្នំ',
+        icon: '🌫️',
+        desc: 'អ័ព្ទចុះត្រជាក់លើព្រៃស្រល់'
+      };
+    }
+    if (c >= 51 && c <= 57) {
+      return {
+        text: 'ភ្លៀងរលឹមស្រិចៗ',
+        icon: '🌦️',
+        desc: 'មានភ្លៀងរលឹមស្រាលៗ'
+      };
+    }
+    if ((c >= 61 && c <= 67) || (c >= 80 && c <= 82)) {
+      return {
+        text: 'មានភ្លៀងធ្លាក់',
+        icon: '🌧️',
+        desc: 'មានភ្លៀងធ្លាក់លើតំបន់ភ្នំ'
+      };
+    }
+    if (c >= 95) {
+      return {
+        text: 'ផ្គររន្ទះ',
+        icon: '⛈️',
+        desc: 'អាចមានភ្លៀងផ្គររន្ទះ'
+      };
+    }
+    return {
+      text: 'ត្រជាក់ស្រួល',
+      icon: '🌤️',
+      desc: 'អាកាសធាតុស្រស់ស្រាយលើខ្ពង់រាប'
+    };
+  }
+
+  async function fetchKiriromWeather(forceRefresh = false) {
+    if (!forceRefresh) {
+      try {
+        const cachedRaw = localStorage.getItem(EXT_STORAGE_KEYS.WEATHER_CACHE);
+        if (cachedRaw) {
+          const cached = JSON.parse(cachedRaw);
+          if (cached && cached.timestamp && (Date.now() - cached.timestamp < 15 * 60 * 1000)) {
+            return cached.data;
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (kiriromWeatherInFlight) return kiriromWeatherInFlight;
+
+    kiriromWeatherInFlight = (async () => {
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${KIRIROM_COORDS.lat}&longitude=${KIRIROM_COORDS.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FBangkok`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) throw new Error('Weather API HTTP ' + res.status);
+        const data = await res.json();
+
+        const cur = data.current || {};
+        const daily = data.daily || {};
+        const wmo = decodeWmoWeather(cur.weather_code, cur.is_day);
+
+        const parsed = {
+          temp: Math.round(cur.temperature_2m ?? 22),
+          apparent: Math.round(cur.apparent_temperature ?? 23),
+          humidity: Math.round(cur.relative_humidity_2m ?? 80),
+          wind: Math.round(cur.wind_speed_10m ?? 6),
+          precip: cur.precipitation ?? 0,
+          isDay: cur.is_day ?? 1,
+          code: cur.weather_code ?? 1,
+          condition: wmo.text,
+          conditionDesc: wmo.desc,
+          icon: wmo.icon,
+          elevation: data.elevation || 626,
+          daily: [
+            {
+              day: 'ថ្ងៃទី ១ (Day 1)',
+              max: Math.round(daily.temperature_2m_max?.[0] ?? 28),
+              min: Math.round(daily.temperature_2m_min?.[0] ?? 21),
+              rainProb: daily.precipitation_probability_max?.[0] ?? 30,
+              icon: decodeWmoWeather(daily.weather_code?.[0] ?? 2, 1).icon,
+              cond: decodeWmoWeather(daily.weather_code?.[0] ?? 2, 1).text
+            },
+            {
+              day: 'ថ្ងៃទី ២ (Day 2)',
+              max: Math.round(daily.temperature_2m_max?.[1] ?? 27),
+              min: Math.round(daily.temperature_2m_min?.[1] ?? 20),
+              rainProb: daily.precipitation_probability_max?.[1] ?? 40,
+              icon: decodeWmoWeather(daily.weather_code?.[1] ?? 2, 1).icon,
+              cond: decodeWmoWeather(daily.weather_code?.[1] ?? 2, 1).text
+            }
+          ],
+          updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        try {
+          localStorage.setItem(EXT_STORAGE_KEYS.WEATHER_CACHE, JSON.stringify({
+            timestamp: Date.now(),
+            data: parsed
+          }));
+        } catch(e) {}
+
+        return parsed;
+      } catch (err) {
+        console.warn('Using offline Kirirom weather fallback:', err);
+        return {
+          temp: 22,
+          apparent: 23,
+          humidity: 82,
+          wind: 5,
+          precip: 0,
+          isDay: 1,
+          code: 2,
+          condition: 'ត្រជាក់ស្រួលលើភ្នំ',
+          conditionDesc: 'អាកាសធាតុស្រស់ស្រាយក្នុងព្រៃស្រល់',
+          icon: '🌤️',
+          elevation: 675,
+          daily: [
+            { day: 'ថ្ងៃទី ១ (Day 1)', max: 28, min: 20, rainProb: 20, icon: '🌤️', cond: 'មេឃស្រឡះ' },
+            { day: 'ថ្ងៃទី ២ (Day 2)', max: 27, min: 19, rainProb: 30, icon: '⛅', cond: 'ពពកតិចតួច' }
+          ],
+          updatedAt: 'ក្រៅបណ្តាញ (Offline)'
+        };
+      } finally {
+        kiriromWeatherInFlight = null;
+      }
+    })();
+
+    return kiriromWeatherInFlight;
+  }
+
+  async function updateHeaderWeatherTemp() {
+    const tempSpan = document.getElementById('ext-weather-pill-temp');
+    const dockTxt = document.getElementById('ext-nav-weather-txt');
+    try {
+      const w = await fetchKiriromWeather(false);
+      if (w && w.temp !== undefined) {
+        if (tempSpan) tempSpan.textContent = `${w.temp}°C`;
+        if (dockTxt) dockTxt.textContent = `${w.temp}°C`;
+      }
+    } catch(e) {}
+  }
+
+  function mountHeaderWeatherPill() {
+    const cur = getMe();
+    if (!cur) return;
+    const whoEl = document.querySelector('.top-in .who');
+    if (!whoEl) return;
+
+    let pill = document.getElementById('ext-header-weather-btn');
+    if (!pill) {
+      pill = document.createElement('button');
+      pill.id = 'ext-header-weather-btn';
+      pill.className = 'ext-header-pill';
+      pill.type = 'button';
+      pill.title = 'មើលការព្យាករណ៍អាកាសធាតុគិរីរម្យ & បញ្ជីឥវ៉ាន់';
+      pill.innerHTML = `🌤️ <span id="ext-weather-pill-temp">--°C</span> <span style="opacity:0.75;font-weight:400;margin-left:2px;">គិរីរម្យ</span>`;
+      pill.onclick = showWeatherModal;
+
+      const logoutBtn = whoEl.querySelector('[data-act="logout"]');
+      if (logoutBtn) whoEl.insertBefore(pill, logoutBtn);
+      else whoEl.appendChild(pill);
+    }
+
+    updateHeaderWeatherTemp();
+  }
+
+  const PACKING_ITEMS = [
+    { id: 'jacket', label: '🧥 អាវរងា ឬអាវក្រៅ', tip: 'ចាំបាច់ពេលយប់លើភ្នំ និងក្នុងរថយន្តម៉ាស៊ីនត្រជាក់ (ពេលយប់អាចចុះដល់ ១៨°C-២០°C)' },
+    { id: 'shoes', label: '👟 ស្បែកជើងប៉ាតា / ដើរព្រៃ', tip: 'សម្រាប់កម្មវិធី Fun Hiking Adventure & Game Challenge' },
+    { id: 'mosquito', label: '🦟 ថ្នាំបាញ់មូស ឬសត្វល្អិត', tip: 'ការពារសត្វល្អិតខាំពេលធ្វើសកម្មភាពក្នុងព្រៃស្រល់' },
+    { id: 'umbrella', label: '☂️ ឆ័ត្រ ឬអាវភ្លៀងតូច', tip: 'អាកាសធាតុលើតំបន់ភ្នំអាចប្រែប្រួល ឬមានភ្លៀងរលឹមស្រិចៗ' },
+    { id: 'powerbank', label: '🔋 Power Bank & ខ្សែសាកទូរស័ព្ទ', tip: 'ត្រៀមថាមពលទូរស័ព្ទសម្រាប់ថតរូបទេសភាព និង Check-in' },
+    { id: 'meds', label: '💊 ថ្នាំផ្ទាល់ខ្លួន / ថ្នាំពុលឡាន', tip: 'សម្រាប់អ្នកងាយវិលមុខពេលជិះឡានឡើងភ្នំ ឬមានជំងឺប្រចាំកាយ' },
+    { id: 'sunscreen', label: '🧴 ឡេការពារកម្ដៅថ្ងៃ (Sunscreen)', tip: 'ការពារស្បែកពេលដើរហាត់ប្រាណ ឬលេងហ្គេមក្រៅអគារ' },
+    { id: 'sports_clothes', label: '🩳 សម្លៀកបំពាក់កីឡាផ្លាស់ប្តូរ', tip: 'សម្រាប់ផ្លាស់ប្តូរបន្ទាប់ពីលេងហ្គេមបែកញើស' },
+    { id: 'gala_clothes', label: '👗 សម្លៀកបំពាក់រាត្រីសមោសរ Gala', tip: 'សម្រាប់កម្មវិធីជប់លៀង Gala Dinner & Party ពេលយប់' }
+  ];
+
+  async function showWeatherModal() {
+    let savedPacking = {};
+    try {
+      savedPacking = JSON.parse(localStorage.getItem(EXT_STORAGE_KEYS.PACKING) || '{}');
+    } catch(e) {}
+
+    const computePackingStats = (store) => {
+      const checkedCount = PACKING_ITEMS.filter(it => !!store[it.id]).length;
+      const total = PACKING_ITEMS.length;
+      const pct = Math.round((checkedCount / total) * 100);
+      return { checkedCount, total, pct };
+    };
+
+    let initialStats = computePackingStats(savedPacking);
+
+    const initialHtml = `
+      <div id="ext-weather-modal-content">
+        <!-- Weather Hero Card -->
+        <div class="ext-weather-hero">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-size:12px;letter-spacing:0.06em;text-transform:uppercase;opacity:0.9;">
+              📍 ឧទ្យានជាតិព្រះសុរាម្រិត-កុសុមៈ គិរីរម្យ
+            </span>
+            <span id="ext-weather-live-badge" style="background:rgba(255,255,255,0.22);padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;">
+              កំពុងទាញយក...
+            </span>
+          </div>
+
+          <div style="display:flex;align-items:baseline;gap:12px;margin:10px 0;">
+            <span id="ext-w-icon" style="font-size:42px;line-height:1;">🌤️</span>
+            <div>
+              <div style="display:flex;align-items:baseline;gap:6px;">
+                <b id="ext-w-temp" style="font-size:46px;font-family:var(--display);line-height:1;">--</b>
+                <span style="font-size:24px;font-weight:400;opacity:0.9;">°C</span>
+              </div>
+              <div id="ext-w-condition" style="font-size:15px;font-weight:600;opacity:0.95;">កំពុងពិនិត្យអាកាសធាតុ...</div>
+            </div>
+          </div>
+
+          <div style="font-size:12px;opacity:0.85;border-top:1px solid rgba(255,255,255,0.2);padding-top:8px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">
+            <span id="ext-w-feels">កម្ដៅជាក់ស្ដែង: --°C</span>
+            <span id="ext-w-elev">កម្ពស់ខ្ពង់រាប: ~675 ម៉ែត្រ</span>
+            <span id="ext-w-updated">បានធ្វើបច្ចុប្បន្នភាព: --</span>
+          </div>
+        </div>
+
+        <!-- 2-Stat Grid -->
+        <div class="ext-weather-stat-grid">
+          <div class="ext-weather-stat-card">
+            <div class="ext-weather-stat-icon">💧</div>
+            <div>
+              <div style="font-size:11px;color:var(--muted);">សំណើមបរិយាកាស</div>
+              <b id="ext-w-hum" style="font-size:15px;">--%</b>
+            </div>
+          </div>
+          <div class="ext-weather-stat-card">
+            <div class="ext-weather-stat-icon">💨</div>
+            <div>
+              <div style="font-size:11px;color:var(--muted);">ល្បឿនខ្យល់បក់</div>
+              <b id="ext-w-wind" style="font-size:15px;">-- km/h</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2-Day Forecast Section -->
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:16px;">
+          <b style="font-size:13px;display:block;margin-bottom:8px;">📅 ការព្យាករណ៍សម្រាប់ដំណើរកម្សាន្ត ២ ថ្ងៃ</b>
+          <div id="ext-w-daily-box" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:color-mix(in srgb, var(--pine) 8%, var(--surface));padding:10px;border-radius:10px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">ថ្ងៃទី ១ (Day 1)</div>
+              <div style="font-size:18px;">🌤️ <b>28°C</b> / 20°C</div>
+              <small style="font-size:11px;color:var(--pine);">មេឃស្រឡះ ត្រជាក់យប់</small>
+            </div>
+            <div style="background:color-mix(in srgb, var(--pine) 8%, var(--surface));padding:10px;border-radius:10px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">ថ្ងៃទី ២ (Day 2)</div>
+              <div style="font-size:18px;">⛅ <b>27°C</b> / 19°C</div>
+              <small style="font-size:11px;color:var(--pine);">ពពកតិចតួច ស្រស់ស្រាយ</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mountain Climate Advisory -->
+        <div style="background:color-mix(in srgb, var(--amber) 10%, var(--surface));border:1px solid color-mix(in srgb, var(--amber) 30%, transparent);border-radius:14px;padding:12px 14px;margin-bottom:18px;">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:700;color:var(--amber);font-size:13px;">
+            <span>🌲</span>
+            <span>ក្រើនរំលឹកអាកាសធាតុព្រៃភ្នំគិរីរម្យ</span>
+          </div>
+          <div style="font-size:12px;line-height:1.55;color:var(--ink);margin-top:6px;">
+            តំបន់ខ្ពង់រាបគិរីរម្យមានកម្ពស់ខ្ពស់ និងព្រៃស្រល់ក្រាស់ ធ្វើឱ្យសីតុណ្ហភាពទាបជាងទីក្រុងភ្នំពេញ <b>៣ ទៅ ៥ អង្សាសេ</b>។ នៅពេលយប់ និងព្រឹកព្រលឹម សីតុណ្ហភាពអាចចុះត្រជាក់ដល់ <b>១៨°C - ២០°C</b> សូមត្រៀមអាវរងាអោយបានគ្រប់គ្នា!
+          </div>
+        </div>
+
+        <!-- Packing Checklist Card -->
+        <div style="background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div>
+              <b style="font-size:14px;">🎒 បញ្ជីផ្ទៀងផ្ទាត់ឥវ៉ាន់ចាំបាច់ (Packing Checklist)</b>
+              <div style="font-size:11.5px;color:var(--muted);">ចុចធីកលើឥវ៉ាន់ដែលបានរៀបចំរួចរាល់៖</div>
+            </div>
+            <b id="ext-packing-count-badge" style="font-size:12px;color:var(--pine);background:color-mix(in srgb, var(--pine) 12%, transparent);padding:3px 8px;border-radius:99px;white-space:nowrap;">
+              ${initialStats.checkedCount}/${initialStats.total} (${initialStats.pct}%)
+            </b>
+          </div>
+
+          <div class="ext-packing-progress-wrap">
+            <div id="ext-packing-progress" class="ext-packing-progress-bar" style="width:${initialStats.pct}%;"></div>
+          </div>
+
+          <div style="display:flex;gap:6px;margin-bottom:12px;">
+            <button class="btn ghost sm" type="button" id="ext-pack-all-btn" style="padding:3px 8px;font-size:11px;border-radius:6px;">✓ ជ្រើសទាំងអស់</button>
+            <button class="btn ghost sm" type="button" id="ext-pack-clear-btn" style="padding:3px 8px;font-size:11px;border-radius:6px;color:var(--muted);">✕ ដោះទាំងអស់</button>
+          </div>
+
+          <div id="ext-packing-items-list">
+            ${PACKING_ITEMS.map(it => {
+              const isChecked = !!savedPacking[it.id];
+              return `
+                <div class="ext-packing-item ${isChecked ? 'checked' : ''}" data-pack-id="${it.id}">
+                  <input type="checkbox" class="ext-packing-checkbox" ${isChecked ? 'checked' : ''}>
+                  <div style="flex:1 1 auto;min-width:0;">
+                    <div style="font-size:13px;font-weight:600;color:var(--ink);">${it.label}</div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:1px;">${it.tip}</div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    openModal('🌤️ អាកាសធាតុ & ការត្រៀមឥវ៉ាន់គិរីរម្យ', initialHtml);
+
+    // Bind packing list interactions
+    const listEl = document.getElementById('ext-packing-items-list');
+    const updateUiAndStorage = () => {
+      const stats = computePackingStats(savedPacking);
+      const badge = document.getElementById('ext-packing-count-badge');
+      const bar = document.getElementById('ext-packing-progress');
+      if (badge) badge.textContent = `${stats.checkedCount}/${stats.total} (${stats.pct}%)`;
+      if (bar) bar.style.width = `${stats.pct}%`;
+      try {
+        localStorage.setItem(EXT_STORAGE_KEYS.PACKING, JSON.stringify(savedPacking));
+      } catch(e) {}
+    };
+
+    if (listEl) {
+      listEl.querySelectorAll('.ext-packing-item').forEach(el => {
+        el.onclick = () => {
+          const id = el.getAttribute('data-pack-id');
+          const chk = el.querySelector('.ext-packing-checkbox');
+          const newState = !savedPacking[id];
+          savedPacking[id] = newState;
+          chk.checked = newState;
+          el.classList.toggle('checked', newState);
+          updateUiAndStorage();
+        };
+      });
+    }
+
+    const packAllBtn = document.getElementById('ext-pack-all-btn');
+    if (packAllBtn) {
+      packAllBtn.onclick = () => {
+        PACKING_ITEMS.forEach(it => { savedPacking[it.id] = true; });
+        if (listEl) {
+          listEl.querySelectorAll('.ext-packing-item').forEach(el => {
+            el.classList.add('checked');
+            el.querySelector('.ext-packing-checkbox').checked = true;
+          });
+        }
+        updateUiAndStorage();
+      };
+    }
+
+    const packClearBtn = document.getElementById('ext-pack-clear-btn');
+    if (packClearBtn) {
+      packClearBtn.onclick = () => {
+        savedPacking = {};
+        if (listEl) {
+          listEl.querySelectorAll('.ext-packing-item').forEach(el => {
+            el.classList.remove('checked');
+            el.querySelector('.ext-packing-checkbox').checked = false;
+          });
+        }
+        updateUiAndStorage();
+      };
+    }
+
+    // Now fetch live weather asynchronously and populate
+    try {
+      const w = await fetchKiriromWeather(true);
+      if (w) {
+        const liveBadge = document.getElementById('ext-weather-live-badge');
+        const iconEl = document.getElementById('ext-w-icon');
+        const tempEl = document.getElementById('ext-w-temp');
+        const condEl = document.getElementById('ext-w-condition');
+        const feelsEl = document.getElementById('ext-w-feels');
+        const elevEl = document.getElementById('ext-w-elev');
+        const updatedEl = document.getElementById('ext-w-updated');
+        const humEl = document.getElementById('ext-w-hum');
+        const windEl = document.getElementById('ext-w-wind');
+        const dailyBox = document.getElementById('ext-w-daily-box');
+
+        if (liveBadge) liveBadge.textContent = '🟢 ផ្សាយផ្ទាល់ (Live)';
+        if (iconEl) iconEl.textContent = w.icon;
+        if (tempEl) tempEl.textContent = w.temp;
+        if (condEl) condEl.textContent = `${w.condition} • ${w.conditionDesc}`;
+        if (feelsEl) feelsEl.textContent = `កម្ដៅជាក់ស្ដែង: ${w.apparent}°C`;
+        if (elevEl) elevEl.textContent = `កម្ពស់ខ្ពង់រាប: ~${w.elevation} ម៉ែត្រ`;
+        if (updatedEl) updatedEl.textContent = `ម៉ោង: ${w.updatedAt}`;
+        if (humEl) humEl.textContent = `${w.humidity}%`;
+        if (windEl) windEl.textContent = `${w.wind} km/h`;
+
+        if (dailyBox && w.daily && w.daily.length >= 2) {
+          dailyBox.innerHTML = `
+            <div style="background:color-mix(in srgb, var(--pine) 8%, var(--surface));padding:10px;border-radius:10px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${w.daily[0].day}</div>
+              <div style="font-size:18px;">${w.daily[0].icon} <b>${w.daily[0].max}°C</b> / ${w.daily[0].min}°C</div>
+              <small style="font-size:11px;color:var(--pine);">${w.daily[0].cond} (ឱកាសភ្លៀង ${w.daily[0].rainProb}%)</small>
+            </div>
+            <div style="background:color-mix(in srgb, var(--pine) 8%, var(--surface));padding:10px;border-radius:10px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px;">${w.daily[1].day}</div>
+              <div style="font-size:18px;">${w.daily[1].icon} <b>${w.daily[1].max}°C</b> / ${w.daily[1].min}°C</div>
+              <small style="font-size:11px;color:var(--pine);">${w.daily[1].cond} (ឱកាសភ្លៀង ${w.daily[1].rainProb}%)</small>
+            </div>
+          `;
+        }
+
+        updateHeaderWeatherTemp();
+      }
+    } catch (e) {
+      console.warn('Weather modal async update error:', e);
+    }
+  }
+
+  // ---------------------------------------------------------
+  // 8.6 Live Announcement & Broadcast System (Feature 2)
+  // ---------------------------------------------------------
+  function renderAnnouncementBanner() {
+    const cur = getMe();
+    const wrap = document.querySelector('#app .wrap');
+    if (!wrap) return;
+
+    let bannerWrapper = document.getElementById('ext-announcement-wrapper');
+    if (!bannerWrapper) {
+      bannerWrapper = document.createElement('div');
+      bannerWrapper.id = 'ext-announcement-wrapper';
+      wrap.insertBefore(bannerWrapper, wrap.firstChild);
+    }
+
+    if (!broadcastState || !broadcastState.active || !broadcastState.title) {
+      bannerWrapper.innerHTML = '';
+      bannerWrapper.style.display = 'none';
+      return;
+    }
+
+    bannerWrapper.style.display = 'block';
+
+    const cat = broadcastState.category || 'info';
+    const isUrgent = cat === 'urgent';
+    const isDismissed = !isUrgent && (localStorage.getItem(EXT_STORAGE_KEYS.DISMISSED_BROADCAST) === String(broadcastState.updatedAt || broadcastState.title));
+
+    if (isDismissed) {
+      bannerWrapper.innerHTML = `
+        <div class="ext-announcement-minimized" id="ext-bc-reopen-btn" title="ចុចដើម្បីបើកមើលសេចក្តីជូនដំណឹងពេញ">
+          <div style="display:flex;align-items:center;gap:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <span>📢</span>
+            <span><b>ដំណឹង:</b> ${escapeHtml(broadcastState.title)}</span>
+          </div>
+          <span style="color:var(--pine);font-weight:600;white-space:nowrap;font-size:11px;">បើកមើល ▾</span>
+        </div>
+      `;
+      const reopenBtn = document.getElementById('ext-bc-reopen-btn');
+      if (reopenBtn) {
+        reopenBtn.onclick = () => showAnnouncementDetailModal(broadcastState);
+      }
+      return;
+    }
+
+    const catMeta = {
+      urgent: { label: 'បន្ទាន់ (Urgent)', icon: '🚨', badgeClass: 'urgent' },
+      warning: { label: 'កាលវិភាគ & ក្រើនរំលឹក', icon: '⚠️', badgeClass: 'warning' },
+      info: { label: 'ដំណឹងទូទៅ (Notice)', icon: '📢', badgeClass: 'info' },
+      gala: { label: 'រាត្រីសមោសរ Gala Dinner', icon: '🎉', badgeClass: 'gala' }
+    }[cat] || { label: 'ដំណឹងទូទៅ', icon: '📢', badgeClass: 'info' };
+
+    const isTr = isTransportationRole(cur);
+    const isAct = isActivityRole(cur);
+    const canManage = cur && (cur.admin || isTr || isAct);
+
+    let timeStr = '';
+    if (broadcastState.updatedAt) {
+      try {
+        const d = new Date(broadcastState.updatedAt);
+        timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } catch(e) {}
+    }
+
+    bannerWrapper.innerHTML = `
+      <div class="ext-announcement-banner ${cat}" id="ext-banner-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="ext-bc-badge ${catMeta.badgeClass}">
+              ${isUrgent ? '<span class="ext-pulse-dot"></span>' : ''}
+              <span>${catMeta.icon} ${catMeta.label}</span>
+            </span>
+            ${timeStr ? `<span style="font-size:11px;color:var(--muted);">• ម៉ោង ${timeStr}</span>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;">
+            ${canManage ? `
+              <button class="btn ghost sm" id="ext-bc-edit-btn" style="padding:2px 8px;font-size:11px;border-radius:6px;height:24px;" title="កែសម្រួលការផ្សាយ">
+                ⚙️ គ្រប់គ្រង
+              </button>
+            ` : ''}
+            ${!isUrgent ? `
+              <button id="ext-bc-dismiss-btn" style="background:transparent;border:0;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 6px;line-height:1;" title="បិទផ្ទាំងនេះ">
+                ✕
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;cursor:pointer;" id="ext-bc-title-click">
+          ${escapeHtml(broadcastState.title)}
+        </div>
+
+        ${broadcastState.message ? `
+          <div style="font-size:13px;line-height:1.45;color:var(--ink);opacity:0.9;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;" id="ext-bc-msg-click">
+            ${escapeHtml(broadcastState.message)}
+          </div>
+        ` : ''}
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px;">
+          <button class="btn sm" id="ext-bc-view-btn" style="font-size:12px;padding:4px 12px;border-radius:8px;">
+            👁️ មើលសេចក្តីជូនដំណឹងពេញ
+          </button>
+          ${broadcastState.author ? `
+            <span style="font-size:11px;color:var(--muted);">ផ្សាយដោយ: <b>${escapeHtml(broadcastState.author)}</b></span>
+          ` : ''}
+        </div>
+      </div>
+    `;
+
+    const openDetail = () => showAnnouncementDetailModal(broadcastState);
+    const titleClick = document.getElementById('ext-bc-title-click');
+    const msgClick = document.getElementById('ext-bc-msg-click');
+    const viewBtn = document.getElementById('ext-bc-view-btn');
+    if (titleClick) titleClick.onclick = openDetail;
+    if (msgClick) msgClick.onclick = openDetail;
+    if (viewBtn) viewBtn.onclick = openDetail;
+
+    const editBtn = document.getElementById('ext-bc-edit-btn');
+    if (editBtn) {
+      editBtn.onclick = () => showBroadcastAdminModal();
+    }
+
+    const dismissBtn = document.getElementById('ext-bc-dismiss-btn');
+    if (dismissBtn) {
+      dismissBtn.onclick = (e) => {
+        e.stopPropagation();
+        localStorage.setItem(EXT_STORAGE_KEYS.DISMISSED_BROADCAST, String(broadcastState.updatedAt || broadcastState.title));
+        renderAnnouncementBanner();
+      };
+    }
+  }
+
+  function mountHeaderBroadcastBtn() {
+    const cur = getMe();
+    if (!cur) return;
+    const isTr = isTransportationRole(cur);
+    const isAct = isActivityRole(cur);
+    const canBroadcast = cur.admin || isTr || isAct;
+    if (!canBroadcast) {
+      const oldBtn = document.getElementById('ext-header-broadcast-btn');
+      if (oldBtn) oldBtn.remove();
+      return;
+    }
+
+    const whoEl = document.querySelector('.top-in .who');
+    if (!whoEl) return;
+
+    let bcBtn = document.getElementById('ext-header-broadcast-btn');
+    if (!bcBtn) {
+      bcBtn = document.createElement('button');
+      bcBtn.id = 'ext-header-broadcast-btn';
+      bcBtn.className = 'ext-header-pill';
+      bcBtn.type = 'button';
+      bcBtn.style.cssText = 'background:color-mix(in srgb, var(--amber) 15%, var(--surface));border-color:var(--amber);color:var(--amber);';
+      bcBtn.title = 'ផ្ញើសេចក្តីជូនដំណឹងផ្ទាល់ទៅកាន់បុគ្គលិកទាំងអស់';
+      bcBtn.innerHTML = `📢 <span style="font-weight:700;">ផ្សាយដំណឹង</span>`;
+      bcBtn.onclick = () => showBroadcastAdminModal();
+
+      const logoutBtn = whoEl.querySelector('[data-act="logout"]');
+      if (logoutBtn) whoEl.insertBefore(bcBtn, logoutBtn);
+      else whoEl.appendChild(bcBtn);
+    }
+  }
+
+  function showAnnouncementDetailModal(bc) {
+    if (!bc) return;
+    const cat = bc.category || 'info';
+    const catMeta = {
+      urgent: { label: 'បន្ទាន់ (Urgent)', icon: '🚨', color: '#ef4444' },
+      warning: { label: 'កាលវិភាគ & ក្រើនរំលឹក', icon: '⚠️', color: '#f59e0b' },
+      info: { label: 'ដំណឹងទូទៅ (Notice)', icon: '📢', color: '#10b981' },
+      gala: { label: 'រាត្រីសមោសរ Gala Dinner', icon: '🎉', color: '#8b5cf6' }
+    }[cat] || { label: 'ដំណឹងទូទៅ', icon: '📢', color: '#10b981' };
+
+    let timeStr = 'ថ្មីៗនេះ';
+    if (bc.updatedAt) {
+      try {
+        const d = new Date(bc.updatedAt);
+        timeStr = `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })} • ម៉ោង ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      } catch(e) {}
+    }
+
+    const cur = getMe();
+    const canManage = cur && (cur.admin || isTransportationRole(cur) || isActivityRole(cur));
+
+    const html = `
+      <div style="display:grid;gap:16px;">
+        <div style="border-left:5px solid ${catMeta.color};background:color-mix(in srgb, ${catMeta.color} 10%, var(--surface));padding:14px;border-radius:12px;">
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:${catMeta.color};">
+            <span>${catMeta.icon}</span>
+            <span>${catMeta.label}</span>
+            <span style="color:var(--muted);font-weight:400;margin-left:auto;">${timeStr}</span>
+          </div>
+          <h2 style="font-family:var(--display);font-size:20px;margin:8px 0 4px 0;line-height:1.3;color:var(--ink);">
+            ${escapeHtml(bc.title)}
+          </h2>
+          ${bc.author ? `<div style="font-size:12px;color:var(--muted);">ផ្សាយដោយ: <b>${escapeHtml(bc.author)}</b></div>` : ''}
+        </div>
+
+        <div style="font-size:14px;line-height:1.65;white-space:pre-wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;color:var(--ink);">
+          ${escapeHtml(bc.message || 'គ្មានខ្លឹមសារបន្ថែម')}
+        </div>
+
+        ${canManage ? `
+          <button class="btn sm" id="ext-detail-admin-edit-btn" style="background:var(--pine);width:100%;font-weight:600;">
+            ⚙️ បើកផ្ទាំងគ្រប់គ្រងការផ្សាយ (Broadcast Manager)
+          </button>
+        ` : ''}
+      </div>
+    `;
+
+    openModal('📢 សេចក្តីជូនដំណឹងផ្លូវការ', html);
+
+    const adminEditBtn = document.getElementById('ext-detail-admin-edit-btn');
+    if (adminEditBtn) {
+      adminEditBtn.onclick = () => {
+        closeModal();
+        setTimeout(showBroadcastAdminModal, 150);
+      };
+    }
+  }
+
+  function showBroadcastAdminModal() {
+    const cur = getMe();
+    if (!cur) {
+      alert('សូមចូលប្រើប្រាស់ជាមុនសិន!');
+      return;
+    }
+
+    const currentBc = broadcastState || {
+      title: '',
+      message: '',
+      category: 'urgent',
+      active: true
+    };
+
+    const templates = [
+      {
+        name: '🚌 ឡានត្រៀមចេញ',
+        cat: 'urgent',
+        title: 'ឡាន Airbus 1-4 ត្រៀមចេញដំណើរម៉ោង ៧:០០ ព្រឹក!',
+        msg: 'សូមបងប្អូនទាំងអស់ប្រញាប់ឡើងឡានតាមលេខរថយន្តដែលបានកំណត់ ដើម្បីចេញដំណើរអោយបានទាន់ពេលវេលា!'
+      },
+      {
+        name: '🍽️ អាហារថ្ងៃត្រង់',
+        cat: 'info',
+        title: 'ម៉ោងពិសារអាហារថ្ងៃត្រង់ជុំគ្នា!',
+        msg: 'សូមអញ្ជើញបងប្អូនទាំងអស់គ្នាទៅកាន់ភោជនីយដ្ឋានធំ ដើម្បីពិសារអាហារថ្ងៃត្រង់ជុំគ្នា!'
+      },
+      {
+        name: '🌲 ឡើងភ្នំ Hiking & Games',
+        cat: 'warning',
+        title: 'ជួបជុំគ្នានៅទីលានសកម្មភាព!',
+        msg: 'សូមបងប្អូនត្រៀមស្បែកជើងប៉ាតា អាវយឺតកីឡា និងទឹកផឹក ដើម្បីជួបជុំគ្នានៅទីលានសកម្មភាពសម្រាប់ការដើរព្រៃ និងលេងហ្គេម!'
+      },
+      {
+        name: '🎉 Gala Dinner',
+        cat: 'gala',
+        title: 'កម្មវិធី Gala Dinner & Party ម៉ោង ៦:៣០ ល្ងាច!',
+        msg: 'កម្មវិធីរាត្រីសមោសរ Gala Dinner & ការប្រគល់រង្វាន់នឹងចាប់ផ្តើមនៅម៉ោង ៦:៣០ ល្ងាច នៅ Gala Hall សូមបងប្អូនទាំងអស់ចូលរួមអោយបានគ្រប់គ្នា!'
+      },
+      {
+        name: '⚠️ ប្តូរម៉ោង / ទីតាំង',
+        cat: 'warning',
+        title: 'សេចក្តីជូនដំណឹងពីការកែសម្រួលកម្មវិធី',
+        msg: 'សូមជម្រាបជូនដំណឹងពីការផ្លាស់ប្តូរម៉ោង ឬទីតាំងកម្មវិធីមួយចំនួនដូចខាងក្រោម...'
+      }
+    ];
+
+    const html = `
+      <div style="display:grid;gap:14px;">
+        <div style="font-size:12px;color:var(--muted);">
+          ជ្រើសរើសគំរូសាររហ័ស (Quick Templates) ឬសរសេរថ្មីដោយខ្លួនឯង៖
+        </div>
+        <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;" class="ext-no-scrollbar" id="ext-bc-tpl-list">
+          ${templates.map((tpl, i) => `
+            <button type="button" class="btn ghost sm" data-tpl-idx="${i}" style="white-space:nowrap;font-size:12px;padding:5px 10px;border-radius:999px;">
+              ${tpl.name}
+            </button>
+          `).join('')}
+        </div>
+
+        <form id="ext-broadcast-form" style="display:grid;gap:12px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--muted);">ប្រភេទសេចក្តីជូនដំណឹង (Category)</label>
+            <select class="inp" id="ext-bc-form-cat" style="width:100%;">
+              <option value="urgent" ${currentBc.category === 'urgent' ? 'selected' : ''}>🚨 ដំណឹងបន្ទាន់ខ្លាំង (Urgent - ក្រហម & មិនអាចបិទបាន)</option>
+              <option value="warning" ${currentBc.category === 'warning' ? 'selected' : ''}>⚠️ កាលវិភាគ & ក្រើនរំលឹក (Important - លឿងទុំ)</option>
+              <option value="info" ${currentBc.category === 'info' ? 'selected' : ''}>📢 ដំណឹងទូទៅ (Notice - បៃតង)</option>
+              <option value="gala" ${currentBc.category === 'gala' ? 'selected' : ''}>🎉 កម្មវិធីរាត្រីសមោសរ & Games (Gala - ស្វាយ)</option>
+            </select>
+          </div>
+
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--muted);">ចំណងជើងសេចក្តីជូនដំណឹង (Title)</label>
+            <input class="inp" id="ext-bc-form-title" placeholder="ឧ. ឡាន Airbus 1-4 ត្រៀមចេញដំណើរ..." value="${escapeHtml(currentBc.title || '')}" required style="width:100%;">
+          </div>
+
+          <div>
+            <label style="display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--muted);">ខ្លឹមសារលម្អិត (Detailed Message)</label>
+            <textarea class="inp" id="ext-bc-form-msg" rows="4" placeholder="សរសេរខ្លឹមសារលម្អិតនៅទីនេះ..." style="width:100%;font-family:inherit;">${escapeHtml(currentBc.message || '')}</textarea>
+          </div>
+
+          <div style="background:color-mix(in srgb, var(--pine) 8%, var(--surface));border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <b style="font-size:13px;">បើកបង្ហាញការផ្សាយ (Active Status)</b>
+              <div style="font-size:11px;color:var(--muted);">ប្រសិនបើបិទ បុគ្គលិកទាំងអស់នឹងលែងឃើញផ្ទាំងប្រកាសនេះ</div>
+            </div>
+            <input type="checkbox" id="ext-bc-form-active" ${currentBc.active !== false ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--pine);cursor:pointer;">
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px;">
+            <button class="btn" type="submit" id="ext-bc-submit-btn" style="background:var(--pine);font-weight:700;">
+              🚀 ផ្សាយផ្ទាល់ភ្លាមៗ
+            </button>
+            <button class="btn ghost" type="button" id="ext-bc-clear-btn" style="color:var(--danger);border-color:var(--line);">
+              🗑️ លុប / បិទការផ្សាយ
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    openModal('📢 ផ្ទាំងគ្រប់គ្រងការផ្សាយដំណឹងបន្ទាន់', html);
+
+    // Template click handler
+    const tplList = document.getElementById('ext-bc-tpl-list');
+    if (tplList) {
+      tplList.querySelectorAll('[data-tpl-idx]').forEach(btn => {
+        btn.onclick = () => {
+          const idx = Number(btn.getAttribute('data-tpl-idx'));
+          const t = templates[idx];
+          if (t) {
+            document.getElementById('ext-bc-form-cat').value = t.cat;
+            document.getElementById('ext-bc-form-title').value = t.title;
+            document.getElementById('ext-bc-form-msg').value = t.msg;
+            document.getElementById('ext-bc-form-active').checked = true;
+          }
+        };
+      });
+    }
+
+    const form = document.getElementById('ext-broadcast-form');
+    if (form) {
+      form.onsubmit = async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('ext-bc-form-title').value.trim();
+        const message = document.getElementById('ext-bc-form-msg').value.trim();
+        const category = document.getElementById('ext-bc-form-cat').value;
+        const active = document.getElementById('ext-bc-form-active').checked;
+
+        if (!title) {
+          alert('សូមបញ្ចូលចំណងជើងសេចក្តីជូនដំណឹង!');
+          return;
+        }
+
+        const subBtn = document.getElementById('ext-bc-submit-btn');
+        if (subBtn) {
+          subBtn.disabled = true;
+          subBtn.textContent = 'កំពុងផ្សាយ...';
+        }
+
+        const payload = {
+          title,
+          message,
+          category,
+          active,
+          author: cur.name + (cur.admin ? ' (Admin)' : (cur.label ? ` (${cur.label})` : '')),
+          authorSid: cur.sid || '',
+          updatedAt: new Date().toISOString()
+        };
+
+        broadcastState = payload;
+        try {
+          localStorage.setItem(EXT_STORAGE_KEYS.BROADCAST, JSON.stringify(payload));
+        } catch(e) {}
+
+        renderAnnouncementBanner();
+
+        const fs = getFirestore();
+        if (fs) {
+          try {
+            await fs.collection('ext_checkins').doc('broadcast').set(payload, { merge: true });
+          } catch(err) {
+            console.warn('Firestore broadcast write queued/error:', err);
+          }
+        }
+
+        closeModal();
+        if (typeof window.toast === 'function') {
+          window.toast('✅ បានផ្សាយដំណឹងផ្ទាល់ទៅកាន់បុគ្គលិកទាំងអស់រួចរាល់!');
+        }
+      };
+    }
+
+    const clearBtn = document.getElementById('ext-bc-clear-btn');
+    if (clearBtn) {
+      clearBtn.onclick = async () => {
+        if (!confirm('តើអ្នកប្រាកដជាចង់បិទការផ្សាយដំណឹងនេះមែនទេ?')) return;
+        const payload = {
+          active: false,
+          updatedAt: new Date().toISOString()
+        };
+        broadcastState = payload;
+        try {
+          localStorage.setItem(EXT_STORAGE_KEYS.BROADCAST, JSON.stringify(payload));
+        } catch(e) {}
+        renderAnnouncementBanner();
+
+        const fs = getFirestore();
+        if (fs) {
+          try {
+            await fs.collection('ext_checkins').doc('broadcast').set(payload, { merge: true });
+          } catch(e) {}
+        }
+        closeModal();
+        if (typeof window.toast === 'function') {
+          window.toast('🗑️ បានបិទការផ្សាយដំណឹងរួចរាល់!');
+        }
+      };
+    }
+  }
+
+  // ---------------------------------------------------------
   // 9. Floating Navigation Dock
   // ---------------------------------------------------------
   function mountNavigationDock() {
@@ -3252,6 +4324,9 @@
       <button class="ext-nav-btn" id="ext-nav-contact" title="ទំនាក់ទំនងបន្ទាន់">
         <span class="icon">📞</span><span>ទំនាក់ទំនង</span>
       </button>
+      <button class="ext-nav-btn" id="ext-nav-weather" title="ការព្យាករណ៍អាកាសធាតុគិរីរម្យ & បញ្ជីឥវ៉ាន់">
+        <span class="icon">🌤️</span><span id="ext-nav-weather-txt">អាកាសធាតុ</span>
+      </button>
       <button class="ext-nav-btn" id="ext-nav-qr" title="${dockTitle}">
         <span class="icon">${canScan ? '📷' : '🎫'}</span>
         <span>${dockLabel}</span>
@@ -3261,6 +4336,7 @@
 
     dock.querySelector('#ext-nav-sched').onclick = showScheduleModal;
     dock.querySelector('#ext-nav-contact').onclick = showContactsModal;
+    dock.querySelector('#ext-nav-weather').onclick = showWeatherModal;
     dock.querySelector('#ext-nav-qr').onclick = () => {
       const activeUser = getMe();
       if (!activeUser) {
@@ -3425,6 +4501,9 @@
   // ---------------------------------------------------------
   function onAppUpdated() {
     setupLocalAuthBypass();
+    renderAnnouncementBanner();
+    mountHeaderWeatherPill();
+    mountHeaderBroadcastBtn();
     mountNavigationDock();
     injectPersonalQrBadge();
     updateCheckinBadges();
