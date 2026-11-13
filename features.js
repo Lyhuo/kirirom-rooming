@@ -27,6 +27,16 @@
     });
   }
 
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   // Load QRCode generator & HTML5 QR Scanner asynchronously
   const QR_LIB_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
   const SCANNER_LIB_URL = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
@@ -2360,10 +2370,9 @@
           ${['Airbus1', 'Airbus2', 'Airbus3', 'Airbus4', 'VIP', 'all'].map(k => {
             const st = getBusStats(k);
             const isMyBus = k === coordinatorBus;
-            const isLockedOther = isCoordinatorLocked && !isMyBus;
             return `
-              <button class="btn sm ext-bus-tab ${k === activeBus ? 'active' : 'ghost'}" data-bus="${k}" style="white-space:nowrap;font-size:11px;padding:4px 10px;flex-shrink:0;border-radius:8px;${isLockedOther ? 'opacity:0.45;' : ''}" title="${isLockedOther ? 'លោកអ្នកអាច Check-in បានតែ ' + getBusLabel(coordinatorBus) : ''}">
-                ${isLockedOther ? '🔒 ' : ''}${st.label} <b>(${st.total})</b>
+              <button class="btn sm ext-bus-tab ${k === activeBus ? 'active' : 'ghost'}" data-bus="${k}" style="white-space:nowrap;font-size:11px;padding:4px 10px;flex-shrink:0;border-radius:8px;" title="${isMyBus ? 'ឡានដែលលោកអ្នកទទួលបន្ទុកផ្ទាល់ (' + st.label + ')' : 'ចុចមើលវត្តមាន ' + st.label}">
+                ${isMyBus ? '⭐ ' : ''}${st.label} <b>(${st.checked}/${st.total})</b>
               </button>
             `;
           }).join('')}
@@ -2502,7 +2511,8 @@
         document.querySelectorAll('.ext-bus-tab').forEach(t => {
           const b = t.dataset.bus;
           const bSt = getBusStats(b);
-          t.innerHTML = `${b === coordinatorBus ? '🔒 ' : ''}${bSt.label} <b style="opacity:0.85;">(${bSt.checked}/${bSt.total})</b>`;
+          const isMyBus = b === coordinatorBus;
+          t.innerHTML = `${isMyBus ? '⭐ ' : ''}${bSt.label} <b style="opacity:0.9;">(${bSt.checked}/${bSt.total})</b>`;
         });
       } else {
         // NIGHT EVENT (Activity Team)
@@ -2567,8 +2577,21 @@
                 <div style="font-size:12px;color:#7f1d1d;margin-top:6px;">
                   👉 ត្រូវ Check-in ឡើងឡានជាមួយ: <b>${otherCoord.name}</b> ${otherCoord.tel ? `(📞 ${otherCoord.tel})` : ''}
                 </div>
+                <div style="margin-top:10px;">
+                  <button class="btn sm" id="ext-switch-to-bus-btn" style="background:#1d5a43;color:#fff;border:none;font-size:12px;padding:6px 14px;border-radius:6px;cursor:pointer;">
+                    🚌 ប្តូរទៅមើល ${otherBusLabel}
+                  </button>
+                </div>
               </div>
             `;
+            const switchBtn = attList.querySelector('#ext-switch-to-bus-btn');
+            if (switchBtn) {
+              switchBtn.onclick = () => {
+                const targetBusKey = normalizeBusKey(foundOther.van);
+                const targetTab = document.querySelector(`.ext-bus-tab[data-bus="${targetBusKey}"]`);
+                if (targetTab) targetTab.click();
+              };
+            }
             return;
           }
         }
@@ -2654,7 +2677,29 @@
               }
             });
           } else {
-            // Fast 1-tap Check-in
+            // Check if this person belongs to another bus and coordinator has an assigned bus
+            const staffBusKey = normalizeBusKey(staff.van);
+            const isCrossBus = (activeSession === 'bus' && coordinatorBus && staffBusKey && staffBusKey !== coordinatorBus);
+
+            if (isCrossBus) {
+              showConfirmDialog({
+                title: 'ℹ️ Check-in ជំនួសឡានផ្សេង?',
+                message: `បុគ្គលិក <b>${escapeHtml(staff.name)}</b> ស្ថិតក្នុង <b>${escapeHtml(staff.van || 'ឡានផ្សេង')}</b><br><br><span style="color:var(--muted);font-size:12px;">(លោកអ្នកជាប្រធាន/អ្នកសម្របសម្រួល <b>${getBusLabel(coordinatorBus)}</b>)</span><br><br>តើលោកអ្នកពិតជាចង់ Check-in ឡើងឡានឱ្យគាត់ជំនួសមែនទេ?`,
+                confirmText: '✅ យល់ព្រម Check-in',
+                cancelText: 'បោះបង់',
+                onConfirm: () => {
+                  toggleCheckin(staff.sid, staff.name, activeSession, activeStaff);
+                  updateProgressCard();
+                  renderAttList();
+                  if (typeof window.toast === 'function') {
+                    window.toast(`✅ បាន Check-in ជំនួស ${staff.name} (${staff.van || ''})`);
+                  }
+                }
+              });
+              return;
+            }
+
+            // Fast 1-tap Check-in for own bus or general admin
             toggleCheckin(staff.sid, staff.name, activeSession, activeStaff);
             updateProgressCard();
             renderAttList();
@@ -2701,15 +2746,18 @@
     document.querySelectorAll('.ext-bus-tab').forEach(tab => {
       tab.onclick = () => {
         const targetBus = tab.dataset.bus;
-        if (isCoordinatorLocked && targetBus !== coordinatorBus) {
-          alert(`⛔ មិនអនុញ្ញាតឡើយ!\n\nលោកអ្នកជាប្រធាន/អ្នកសម្របសម្រួល ${getBusLabel(coordinatorBus)} អាច Check-in បានតែបុគ្គលិកដែលជិះ ${getBusLabel(coordinatorBus)} ប៉ុណ្ណោះ!`);
-          return;
-        }
         document.querySelectorAll('.ext-bus-tab').forEach(t => {
           t.className = 'btn ghost sm ext-bus-tab';
         });
         tab.className = 'btn sm ext-bus-tab active';
         activeBus = targetBus;
+
+        if (searchInp) {
+          searchInp.placeholder = (activeBus === 'all')
+            ? 'ស្វែងរកឈ្មោះ ឬ Staff ID ក្នុងចំណោមឡានទាំងអស់...'
+            : `ស្វែងរកឈ្មោះ ឬ Staff ID ក្នុងឡាន ${getBusLabel(activeBus)}...`;
+        }
+
         updateProgressCard();
         renderAttList();
       };
@@ -2825,8 +2873,44 @@
                         សូមណែនាំគាត់ឱ្យទៅ Check-in ឡើងឡានជាមួយ: <b>${correctCoord.name}</b> ${correctCoord.tel ? `(📞 ${correctCoord.tel})` : ''}
                       </div>
                     </div>
+                    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+                      <button class="btn sm" id="ext-qr-force-chk-btn" style="background:#1d5a43;color:#fff;border:none;font-size:11.5px;padding:5px 12px;border-radius:6px;cursor:pointer;">
+                        ✅ Check-in ឡើងឡានជំនួស
+                      </button>
+                      <button class="btn sm ghost" id="ext-qr-switch-bus-btn" style="font-size:11.5px;padding:5px 12px;border-radius:6px;cursor:pointer;">
+                        🚌 ប្តូរទៅមើល ${found.van || 'ឡានគាត់'}
+                      </button>
+                    </div>
                   </div>
                 `;
+                const forceChkBtn = feedbackBox.querySelector('#ext-qr-force-chk-btn');
+                if (forceChkBtn) {
+                  forceChkBtn.onclick = () => {
+                    showConfirmDialog({
+                      title: 'ℹ️ Check-in ជំនួសឡានផ្សេង?',
+                      message: `បុគ្គលិក <b>${escapeHtml(found.name)}</b> ស្ថិតក្នុង <b>${escapeHtml(found.van || 'ឡានផ្សេង')}</b><br><br>តើលោកអ្នកពិតជាចង់ Check-in ឡើងឡានឱ្យគាត់ជំនួសមែនទេ?`,
+                      confirmText: '✅ យល់ព្រម Check-in',
+                      cancelText: 'បោះបង់',
+                      onConfirm: () => {
+                        toggleCheckin(found.sid, found.name, 'bus', activeStaff);
+                        updateProgressCard();
+                        renderAttList();
+                        if (typeof window.toast === 'function') {
+                          window.toast(`✅ បាន Check-in ជំនួស ${found.name} (${found.van || ''})`);
+                        }
+                        feedbackBox.style.display = 'none';
+                      }
+                    });
+                  };
+                }
+                const switchBusBtn = feedbackBox.querySelector('#ext-qr-switch-bus-btn');
+                if (switchBusBtn) {
+                  switchBusBtn.onclick = () => {
+                    const targetTab = document.querySelector(`.ext-bus-tab[data-bus="${personBusKey}"]`);
+                    if (targetTab) targetTab.click();
+                    feedbackBox.style.display = 'none';
+                  };
+                }
               }
             } else {
               if (!canDoNight) {
