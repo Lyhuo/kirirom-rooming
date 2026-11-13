@@ -2370,9 +2370,10 @@
           ${['Airbus1', 'Airbus2', 'Airbus3', 'Airbus4', 'VIP', 'all'].map(k => {
             const st = getBusStats(k);
             const isMyBus = k === coordinatorBus;
+            const isLockedOther = isCoordinatorLocked && !isMyBus;
             return `
-              <button class="btn sm ext-bus-tab ${k === activeBus ? 'active' : 'ghost'}" data-bus="${k}" style="white-space:nowrap;font-size:11px;padding:4px 10px;flex-shrink:0;border-radius:8px;" title="${isMyBus ? 'ឡានដែលលោកអ្នកទទួលបន្ទុកផ្ទាល់ (' + st.label + ')' : 'ចុចមើលវត្តមាន ' + st.label}">
-                ${isMyBus ? '⭐ ' : ''}${st.label} <b>(${st.checked}/${st.total})</b>
+              <button class="btn sm ext-bus-tab ${k === activeBus ? 'active' : 'ghost'}" data-bus="${k}" style="white-space:nowrap;font-size:11px;padding:4px 10px;flex-shrink:0;border-radius:8px;${isLockedOther ? 'opacity:0.55;cursor:not-allowed;' : ''}" title="${isLockedOther ? '🔒 មិនអាចចុចបានទេ (លោកអ្នកទទួលបន្ទុកតែ ' + getBusLabel(coordinatorBus) + ')' : (isMyBus ? 'ឡានដែលលោកអ្នកទទួលបន្ទុកផ្ទាល់' : 'វត្តមាន ' + st.label)}">
+                ${isLockedOther ? '🔒 ' : (isMyBus ? '⭐ ' : '')}${st.label} <b>(${st.checked}/${st.total})</b>
               </button>
             `;
           }).join('')}
@@ -2512,7 +2513,8 @@
           const b = t.dataset.bus;
           const bSt = getBusStats(b);
           const isMyBus = b === coordinatorBus;
-          t.innerHTML = `${isMyBus ? '⭐ ' : ''}${bSt.label} <b style="opacity:0.9;">(${bSt.checked}/${bSt.total})</b>`;
+          const isLockedOther = isCoordinatorLocked && !isMyBus;
+          t.innerHTML = `${isLockedOther ? '🔒 ' : (isMyBus ? '⭐ ' : '')}${bSt.label} <b style="opacity:0.9;">(${bSt.checked}/${bSt.total})</b>`;
         });
       } else {
         // NIGHT EVENT (Activity Team)
@@ -2577,21 +2579,11 @@
                 <div style="font-size:12px;color:#7f1d1d;margin-top:6px;">
                   👉 ត្រូវ Check-in ឡើងឡានជាមួយ: <b>${otherCoord.name}</b> ${otherCoord.tel ? `(📞 ${otherCoord.tel})` : ''}
                 </div>
-                <div style="margin-top:10px;">
-                  <button class="btn sm" id="ext-switch-to-bus-btn" style="background:#1d5a43;color:#fff;border:none;font-size:12px;padding:6px 14px;border-radius:6px;cursor:pointer;">
-                    🚌 ប្តូរទៅមើល ${otherBusLabel}
-                  </button>
+                <div style="font-size:11.5px;color:#991b1b;margin-top:8px;background:rgba(239,68,68,0.1);padding:6px;border-radius:6px;">
+                  🔒 លោកអ្នកមិនអាចចុចមើល ឬ Check-in ឱ្យឡានផ្សេងបានឡើយ!
                 </div>
               </div>
             `;
-            const switchBtn = attList.querySelector('#ext-switch-to-bus-btn');
-            if (switchBtn) {
-              switchBtn.onclick = () => {
-                const targetBusKey = normalizeBusKey(foundOther.van);
-                const targetTab = document.querySelector(`.ext-bus-tab[data-bus="${targetBusKey}"]`);
-                if (targetTab) targetTab.click();
-              };
-            }
             return;
           }
         }
@@ -2606,9 +2598,13 @@
       attList.innerHTML = filtered.map(p => {
         const checked = isStaffCheckedIn(p.sid, p.name, activeSession);
         const chkData = getStaffCheckinData(p.sid, p.name, activeSession);
-        const canCheckThisSession = (activeSession === 'bus') ? canDoBus : canDoNight;
+        const staffBusKey = normalizeBusKey(p.van);
+        const isCrossBus = (activeSession === 'bus' && isCoordinatorLocked && staffBusKey !== coordinatorBus);
+        const canCheckThisSession = (activeSession === 'bus' ? canDoBus : canDoNight) && !isCrossBus;
         let btnText = '';
-        if (!canCheckThisSession) {
+        if (isCrossBus) {
+          btnText = checked ? '✅ បានឡើង' : '🔒 ខុសឡាន';
+        } else if (!canCheckThisSession) {
           btnText = checked ? (activeSession === 'bus' ? '✅ បានឡើង' : '✅ បានចូល') : '🔒 គ្មានសិទ្ធិ';
         } else if (activeSession === 'bus') {
           btnText = checked ? '✅ បានឡើង' : '⭕ Check-in';
@@ -2634,7 +2630,7 @@
                 </div>
               ` : ''}
             </div>
-            <button class="btn sm ext-att-toggle-btn ${checked ? 'checked-btn' : 'ghost'}" data-toggle-chk="${p.sid || p.name}" style="${!canCheckThisSession ? 'opacity:0.45;' : ''}${nightBtnStyle}" title="${!canCheckThisSession ? 'លោកអ្នកគ្មានសិទ្ធិ Check-in ក្នុងផ្នែកនេះទេ' : ''}">
+            <button class="btn sm ext-att-toggle-btn ${checked ? 'checked-btn' : 'ghost'}" data-toggle-chk="${p.sid || p.name}" style="${!canCheckThisSession ? 'opacity:0.45;cursor:not-allowed;' : ''}${nightBtnStyle}" title="${isCrossBus ? '🔒 មិនអាច Check-in បានទេ (បុគ្គលិកឡានផ្សេង)' : (!canCheckThisSession ? 'លោកអ្នកគ្មានសិទ្ធិ Check-in ក្នុងផ្នែកនេះទេ' : '')}">
               ${btnText}
             </button>
           </div>
@@ -2679,23 +2675,10 @@
           } else {
             // Check if this person belongs to another bus and coordinator has an assigned bus
             const staffBusKey = normalizeBusKey(staff.van);
-            const isCrossBus = (activeSession === 'bus' && coordinatorBus && staffBusKey && staffBusKey !== coordinatorBus);
+            const isCrossBus = (activeSession === 'bus' && isCoordinatorLocked && staffBusKey !== coordinatorBus);
 
             if (isCrossBus) {
-              showConfirmDialog({
-                title: 'ℹ️ Check-in ជំនួសឡានផ្សេង?',
-                message: `បុគ្គលិក <b>${escapeHtml(staff.name)}</b> ស្ថិតក្នុង <b>${escapeHtml(staff.van || 'ឡានផ្សេង')}</b><br><br><span style="color:var(--muted);font-size:12px;">(លោកអ្នកជាប្រធាន/អ្នកសម្របសម្រួល <b>${getBusLabel(coordinatorBus)}</b>)</span><br><br>តើលោកអ្នកពិតជាចង់ Check-in ឡើងឡានឱ្យគាត់ជំនួសមែនទេ?`,
-                confirmText: '✅ យល់ព្រម Check-in',
-                cancelText: 'បោះបង់',
-                onConfirm: () => {
-                  toggleCheckin(staff.sid, staff.name, activeSession, activeStaff);
-                  updateProgressCard();
-                  renderAttList();
-                  if (typeof window.toast === 'function') {
-                    window.toast(`✅ បាន Check-in ជំនួស ${staff.name} (${staff.van || ''})`);
-                  }
-                }
-              });
+              alert(`⛔ មិនអនុញ្ញាតឡើយ!\n\nលោកអ្នកមិនអាច Check-in បុគ្គលិក ${staff.name} បានឡើយ ពីព្រោះគាត់ត្រូវជិះ ${staff.van || 'ឡានផ្សេង'} (លោកអ្នកទទួលបន្ទុកតែ ${getBusLabel(coordinatorBus)})!`);
               return;
             }
 
@@ -2746,6 +2729,10 @@
     document.querySelectorAll('.ext-bus-tab').forEach(tab => {
       tab.onclick = () => {
         const targetBus = tab.dataset.bus;
+        if (isCoordinatorLocked && targetBus !== coordinatorBus) {
+          alert(`⛔ មិនអនុញ្ញាតឡើយ!\n\nលោកអ្នកជាប្រធាន/អ្នកសម្របសម្រួល ${getBusLabel(coordinatorBus)} មិនអាចចុចមើល ឬគ្រប់គ្រងឡានផ្សេងបានឡើយ!`);
+          return;
+        }
         document.querySelectorAll('.ext-bus-tab').forEach(t => {
           t.className = 'btn ghost sm ext-bus-tab';
         });
@@ -2762,6 +2749,8 @@
         renderAttList();
       };
     });
+
+
 
     // Status filter switcher
     document.querySelectorAll('.ext-status-chip').forEach(btn => {
@@ -2828,7 +2817,7 @@
               }
               // TRANSPORTATION SESSION: Strict bus matching!
               const personBusKey = normalizeBusKey(found.van);
-              const isMatch = (activeBus === 'all' || personBusKey === activeBus);
+              const isMatch = isCoordinatorLocked ? (personBusKey === coordinatorBus) : (activeBus === 'all' || personBusKey === activeBus);
 
               if (isMatch) {
                 if (!isStaffCheckedIn(found.sid, found.name, 'bus')) {
@@ -2873,44 +2862,11 @@
                         សូមណែនាំគាត់ឱ្យទៅ Check-in ឡើងឡានជាមួយ: <b>${correctCoord.name}</b> ${correctCoord.tel ? `(📞 ${correctCoord.tel})` : ''}
                       </div>
                     </div>
-                    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-                      <button class="btn sm" id="ext-qr-force-chk-btn" style="background:#1d5a43;color:#fff;border:none;font-size:11.5px;padding:5px 12px;border-radius:6px;cursor:pointer;">
-                        ✅ Check-in ឡើងឡានជំនួស
-                      </button>
-                      <button class="btn sm ghost" id="ext-qr-switch-bus-btn" style="font-size:11.5px;padding:5px 12px;border-radius:6px;cursor:pointer;">
-                        🚌 ប្តូរទៅមើល ${found.van || 'ឡានគាត់'}
-                      </button>
+                    <div style="font-size:11.5px;color:#991b1b;margin-top:6px;background:rgba(239,68,68,0.1);padding:6px 10px;border-radius:6px;text-align:center;">
+                      🔒 លោកអ្នកមិនអាច Check-in ឱ្យបុគ្គលិកឡានផ្សេងបានឡើយ!
                     </div>
                   </div>
                 `;
-                const forceChkBtn = feedbackBox.querySelector('#ext-qr-force-chk-btn');
-                if (forceChkBtn) {
-                  forceChkBtn.onclick = () => {
-                    showConfirmDialog({
-                      title: 'ℹ️ Check-in ជំនួសឡានផ្សេង?',
-                      message: `បុគ្គលិក <b>${escapeHtml(found.name)}</b> ស្ថិតក្នុង <b>${escapeHtml(found.van || 'ឡានផ្សេង')}</b><br><br>តើលោកអ្នកពិតជាចង់ Check-in ឡើងឡានឱ្យគាត់ជំនួសមែនទេ?`,
-                      confirmText: '✅ យល់ព្រម Check-in',
-                      cancelText: 'បោះបង់',
-                      onConfirm: () => {
-                        toggleCheckin(found.sid, found.name, 'bus', activeStaff);
-                        updateProgressCard();
-                        renderAttList();
-                        if (typeof window.toast === 'function') {
-                          window.toast(`✅ បាន Check-in ជំនួស ${found.name} (${found.van || ''})`);
-                        }
-                        feedbackBox.style.display = 'none';
-                      }
-                    });
-                  };
-                }
-                const switchBusBtn = feedbackBox.querySelector('#ext-qr-switch-bus-btn');
-                if (switchBusBtn) {
-                  switchBusBtn.onclick = () => {
-                    const targetTab = document.querySelector(`.ext-bus-tab[data-bus="${personBusKey}"]`);
-                    if (targetTab) targetTab.click();
-                    feedbackBox.style.display = 'none';
-                  };
-                }
               }
             } else {
               if (!canDoNight) {
